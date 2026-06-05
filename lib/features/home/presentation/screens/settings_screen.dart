@@ -364,6 +364,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     foregroundImage: _avatarBytes != null
                         ? MemoryImage(_avatarBytes!)
                         : _networkAvatarImage(user, baseUrl),
+                    onForegroundImageError: (_, __) {},
                     child: _avatarBytes == null
                         ? Text(
                             _displayInitial(user),
@@ -410,6 +411,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     foregroundImage: _avatarBytes != null
                         ? MemoryImage(_avatarBytes!)
                         : _networkAvatarImage(user, baseUrl),
+                    onForegroundImageError: (_, __) {},
                     child: _avatarBytes == null
                         ? Text(
                             _displayInitial(user),

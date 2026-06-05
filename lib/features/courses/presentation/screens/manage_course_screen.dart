@@ -45,31 +45,82 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true,
-      );
+  Future<void> _setImageUrl() async {
+    final controller = TextEditingController(
+        text: (_course!.imageUrl != null && _course!.imageUrl!.startsWith('http'))
+            ? _course!.imageUrl!
+            : '');
+    final theme = Theme.of(context);
 
-      if (result != null && result.files.single.bytes != null) {
-        final bytes = result.files.single.bytes!;
-        final name = result.files.single.name;
-        
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Set Course Thumbnail'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Image URL',
+                  hintText: 'https://example.com/image.jpg',
+                  prefixIcon: Icon(Icons.link_rounded),
+                ),
+                keyboardType: TextInputType.url,
+                autofocus: true,
+                onChanged: (_) => setDialogState(() {}),
+              ),
+              const SizedBox(height: 16),
+              if (controller.text.trim().startsWith('http'))
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    controller.text.trim(),
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 120,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('Invalid image URL'),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => ctx.pop(null), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () => ctx.pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      try {
         await ref.read(courseRepositoryProvider).updateCourse(
           widget.courseId,
-          imageBytes: bytes,
-          imageFileName: name,
+          imageUrl: result.isNotEmpty ? result : null,
         );
         if (!mounted) return;
         ref.invalidate(courseDetailProvider(widget.courseId));
         _loadCourse();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Course image updated!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Thumbnail updated!')));
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update thumbnail: $e')));
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update image: $e')));
     }
   }
 
@@ -245,18 +296,16 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
-                      image: _course!.imageUrl != null && _course!.imageUrl!.isNotEmpty
+                      image: (_course!.imageUrl != null && _course!.imageUrl!.startsWith('http'))
                           ? DecorationImage(
-                              image: NetworkImage(_course!.imageUrl!.startsWith('http') 
-                                  ? _course!.imageUrl! 
-                                  : 'http://localhost:8000${_course!.imageUrl}'),
+                              image: NetworkImage(_course!.imageUrl!),
                               fit: BoxFit.cover,
                             )
                           : null,
                     ),
                   ),
                   InkWell(
-                    onTap: _pickImage,
+                    onTap: _setImageUrl,
                     child: Container(
                       height: 200,
                       width: double.infinity,
@@ -265,9 +314,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.camera_alt_outlined, color: Colors.white, size: 40),
+                            Icon(Icons.link_rounded, color: Colors.white, size: 36),
                             SizedBox(height: 8),
-                            Text("Change Thumbnail", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            Text("Set Image URL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -498,7 +547,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
   Future<void> _showEditCourseDialog() async {
     final titleController = TextEditingController(text: _course!.title);
     final descController = TextEditingController(text: _course!.description);
-    
+
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -532,6 +581,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
           title: titleController.text.trim(),
           description: descController.text.trim(),
         );
+
         ref.invalidate(courseDetailProvider(widget.courseId));
         _loadCourse();
       } catch (e) {

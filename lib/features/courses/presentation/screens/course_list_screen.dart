@@ -35,8 +35,6 @@ class CourseListScreen extends ConsumerWidget {
       ),
       floatingActionButton: isInstructor
           ? FloatingActionButton.extended(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
               onPressed: () => context.pushNamed('create_course'),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Create New Course'),
@@ -344,16 +342,19 @@ class _CourseCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: theme.brightness == Brightness.dark ? Colors.white10 : courseAccent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
-                    image: course.imageUrl != null && course.imageUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(course.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
                   ),
-                  child: course.imageUrl == null || course.imageUrl!.isEmpty
-                      ? Icon(Icons.auto_stories_rounded, color: theme.brightness == Brightness.dark ? Colors.white70 : courseAccent, size: 32)
-                      : null,
+                  clipBehavior: Clip.antiAlias,
+                  child: (course.imageUrl != null && course.imageUrl!.isNotEmpty && course.imageUrl!.startsWith('http'))
+                      ? Image.network(
+                          course.imageUrl!,
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Icon(Icons.auto_stories_rounded, color: theme.brightness == Brightness.dark ? Colors.white70 : courseAccent, size: 32),
+                          ),
+                        )
+                      : Icon(Icons.auto_stories_rounded, color: theme.brightness == Brightness.dark ? Colors.white70 : courseAccent, size: 32),
                 ),
                 const SizedBox(width: 20),
                 Expanded(

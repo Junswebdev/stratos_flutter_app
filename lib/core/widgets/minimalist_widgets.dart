@@ -157,6 +157,58 @@ class MinimalTextField extends StatelessWidget {
   }
 }
 
+class SafeAvatar extends StatelessWidget {
+  final String? imageUrl;
+  final double radius;
+  final Color? backgroundColor;
+  final String fallbackText;
+  final Color? fallbackTextColor;
+  final double? fontSize;
+
+  const SafeAvatar({
+    super.key,
+    required this.imageUrl,
+    required this.radius,
+    required this.fallbackText,
+    this.backgroundColor,
+    this.fallbackTextColor,
+    this.fontSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bgColor = backgroundColor ?? theme.colorScheme.primary.withValues(alpha: 0.14);
+    final textColor = fallbackTextColor ?? theme.colorScheme.primary;
+    final size = radius * 2;
+
+    final fallback = Text(
+      fallbackText,
+      style: TextStyle(
+        color: textColor,
+        fontWeight: FontWeight.w900,
+        fontSize: fontSize,
+      ),
+    );
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: bgColor,
+      child: (imageUrl != null && imageUrl!.isNotEmpty)
+          ? ClipOval(
+              child: Image.network(
+                imageUrl!,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => fallback,
+              ),
+            )
+          : fallback,
+    );
+  }
+}
+
 class MinimalStatCard extends StatelessWidget {
   final String value;
   final String label;

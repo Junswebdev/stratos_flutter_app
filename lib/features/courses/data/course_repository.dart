@@ -89,8 +89,7 @@ class CourseRepository {
     String? description,
     EduLevel eduLevel = EduLevel.higherEd,
     required String instructorId,
-    List<int>? imageBytes,
-    String? imageFileName,
+    String? imageUrl,
   }) async {
     final Map<String, dynamic> data = {
       'title': title,
@@ -99,12 +98,8 @@ class CourseRepository {
       'instructor_id': instructorId,
     };
 
-    if (imageBytes != null && imageFileName != null) {
-      data['image_file'] = MultipartFile.fromBytes(
-        imageBytes,
-        filename: imageFileName,
-        contentType: _getMediaType(imageFileName),
-      );
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      data['image_url_input'] = imageUrl;
     }
 
     final formData = FormData.fromMap(data);
@@ -121,21 +116,13 @@ class CourseRepository {
     String? title,
     String? description,
     EduLevel? eduLevel,
-    List<int>? imageBytes,
-    String? imageFileName,
+    String? imageUrl,
   }) async {
     final data = <String, dynamic>{};
     if (title != null) data['title'] = title;
     if (description != null) data['description'] = description;
     if (eduLevel != null) data['edu_level'] = eduLevel.toJson();
-
-    if (imageBytes != null && imageFileName != null) {
-      data['image_file'] = MultipartFile.fromBytes(
-        imageBytes,
-        filename: imageFileName,
-        contentType: _getMediaType(imageFileName),
-      );
-    }
+    if (imageUrl != null && imageUrl.isNotEmpty) data['image_url_input'] = imageUrl;
 
     final formData = FormData.fromMap(data);
 

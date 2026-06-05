@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:stratos_app/core/theme.dart';
+import 'package:stratos_app/core/widgets/minimalist_widgets.dart';
 
 import '../../../../data/dio_client.dart';
 import '../../../home/application/home_providers.dart';
@@ -318,20 +319,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               children: [
                                 if (!isMe) ...[
                                   if (isLastInGroup)
-                                    CircleAvatar(
-                                      radius: 14,
-                                      backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
-                                      backgroundImage: msg.senderAvatarUrl != null && msg.senderAvatarUrl!.isNotEmpty
-                                          ? NetworkImage(msg.senderAvatarUrl!.startsWith('http') 
-                                              ? msg.senderAvatarUrl! 
+                                    SafeAvatar(
+                                      imageUrl: msg.senderAvatarUrl != null && msg.senderAvatarUrl!.isNotEmpty
+                                          ? (msg.senderAvatarUrl!.startsWith('http')
+                                              ? msg.senderAvatarUrl!
                                               : '$serverBaseUrl${msg.senderAvatarUrl!.startsWith('/') ? '' : '/'}${msg.senderAvatarUrl!}')
                                           : null,
-                                      child: msg.senderAvatarUrl == null || msg.senderAvatarUrl!.isEmpty
-                                          ? Text(
-                                              (msg.senderName ?? '?').substring(0, 1).toUpperCase(),
-                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant),
-                                            )
-                                          : null,
+                                      radius: 14,
+                                      backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
+                                      fallbackText: (msg.senderName ?? '?').substring(0, 1).toUpperCase(),
+                                      fallbackTextColor: theme.colorScheme.onSurfaceVariant,
+                                      fontSize: 10,
                                     )
                                   else
                                     const SizedBox(width: 28),

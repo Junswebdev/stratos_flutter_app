@@ -287,23 +287,16 @@ class _ShellDrawer extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: accentColor.withValues(alpha: 0.14),
-                      backgroundImage: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                          ? NetworkImage(user!.avatarUrl!.startsWith('http') 
-                              ? user!.avatarUrl! 
+                    SafeAvatar(
+                      imageUrl: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                          ? (user!.avatarUrl!.startsWith('http')
+                              ? user!.avatarUrl!
                               : '$serverBaseUrl${user!.avatarUrl!.startsWith('/') ? '' : '/'}${user!.avatarUrl!}')
                           : null,
-                      child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
-                          ? Text(
-                              _safeInitial(user),
-                              style: TextStyle(
-                                color: accentColor,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            )
-                          : null,
+                      radius: 24,
+                      backgroundColor: accentColor.withValues(alpha: 0.14),
+                      fallbackText: _safeInitial(user),
+                      fallbackTextColor: accentColor,
                     ),
                     const SizedBox(height: 12),
                     Flexible(child: Text(user?.displayName ?? 'User', style: theme.textTheme.titleLarge, overflow: TextOverflow.ellipsis)),
@@ -376,20 +369,17 @@ class _ShellProfileCard extends ConsumerWidget {
       showBorder: false,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-            backgroundImage: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                ? NetworkImage(user!.avatarUrl!.startsWith('http') 
-                    ? user!.avatarUrl! 
+          SafeAvatar(
+            imageUrl: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                ? (user!.avatarUrl!.startsWith('http')
+                    ? user!.avatarUrl!
                     : '$serverBaseUrl${user!.avatarUrl!.startsWith('/') ? '' : '/'}${user!.avatarUrl!}')
                 : null,
-            child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
-                ? Text(
-                    _safeInitial(user),
-                    style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 12),
-                  )
-                : null,
+            radius: 16,
+            backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            fallbackText: _safeInitial(user),
+            fallbackTextColor: theme.colorScheme.onSurface,
+            fontSize: 12,
           ),
           const SizedBox(width: 12),
           Expanded(
