@@ -32,7 +32,7 @@ class AppColors {
   static const Color darkBackground = Color(0xFF0F1117);
   static const Color darkSurface = Color(0xFF171B26);
   static const Color darkCard = Color(0xFF1E2333);
-  static const Color darkBorder = Color(0xFF2A3147);
+  static const Color darkBorder = Color(0xFF3D4466);
   static const Color darkTextHeader = Color(0xFFF0F4FF);
   static const Color darkTextBody = Color(0xFFB8C4D8);
   static const Color darkTextSecondary = Color(0xFF6E7D96);

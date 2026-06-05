@@ -107,7 +107,7 @@ class _MobileAvatarButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
     final serverBaseUrl = ref.watch(serverBaseUrlProvider);
 
     return GestureDetector(
@@ -152,18 +152,21 @@ class _ShellRail extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
 
     return Container(
       width: 260,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
+        border: isDark
+            ? Border(right: BorderSide(color: AppColors.darkBorder, width: 1))
+            : null,
         boxShadow: isDark
             ? null
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 20,
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 24,
                   offset: const Offset(4, 0),
                 ),
               ],
@@ -179,10 +182,10 @@ class _ShellRail extends ConsumerWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: theme.colorScheme.primary,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 20),
+                  child: Icon(Icons.auto_stories_rounded, color: theme.colorScheme.onPrimary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -287,7 +290,7 @@ class _RailProfileCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
     final serverBaseUrl = ref.watch(serverBaseUrlProvider);
 
     return Container(
@@ -297,6 +300,9 @@ class _RailProfileCard extends ConsumerWidget {
             ? AppColors.darkCard
             : AppColors.background,
         borderRadius: BorderRadius.circular(16),
+        border: isDark
+            ? Border.all(color: AppColors.darkBorder, width: 1)
+            : null,
       ),
       child: Row(
         children: [

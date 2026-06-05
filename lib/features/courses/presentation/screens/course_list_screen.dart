@@ -19,7 +19,8 @@ class CourseListScreen extends ConsumerWidget {
     final profileAsync = ref.watch(profileProvider);
     final userData = profileAsync.asData?.value;
     final isInstructor = userData?.role == 'instructor' || userData?.role == 'admin';
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    final theme = Theme.of(context);
+    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
 
     return Scaffold(
       appBar: AppBar(
@@ -322,9 +323,7 @@ class _CourseCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(24),
       borderRadius: 32,
-      color: theme.colorScheme.surface,
-      showShadow: true,
-      showBorder: theme.brightness == Brightness.dark,
+      color: theme.colorScheme.surfaceContainerHighest,
       showHighlighter: true,
       child: InkWell(
         onTap: onTap,
@@ -377,7 +376,7 @@ class _CourseCard extends StatelessWidget {
                         course.title,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
-                          color: theme.brightness == Brightness.dark ? Colors.white : Colors.black,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       Text(

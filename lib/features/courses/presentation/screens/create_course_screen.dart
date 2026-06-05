@@ -90,7 +90,7 @@ class _CreateCourseScreenState extends ConsumerState<CreateCourseScreen> {
                 decoration: BoxDecoration(
                   color: isDark
                       ? AppColors.darkCard
-                      : AppColors.primary.withValues(alpha: 0.06),
+                      : theme.colorScheme.primary.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: hasImage
