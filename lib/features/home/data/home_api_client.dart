@@ -8,7 +8,7 @@ import '../../../data/dio_client.dart';
 
 const String _defaultApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:8000/api/v1/',
+  defaultValue: 'https://stratos-fastapi-backend.onrender.com',
 );
 
 const List<String> _tokenKeys = <String>[

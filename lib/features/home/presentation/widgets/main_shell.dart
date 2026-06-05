@@ -198,24 +198,27 @@ class _ShellRail extends ConsumerWidget {
                 final isSelected = _matchesLocation(currentLocation, item.matches);
                 return Stack(
                   children: [
-                    ListTile(
-                      leading: Icon(
-                        item.icon, 
-                        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                        size: 22,
-                      ),
-                      title: Text(
-                        item.label,
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                    Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        leading: Icon(
+                          item.icon,
                           color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                          fontSize: 14,
+                          size: 22,
                         ),
+                        title: Text(
+                          item.label,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                          ),
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        selected: isSelected,
+                        selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+                        onTap: () => onNavigate(item.routeName),
                       ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      selected: isSelected,
-                      selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
-                      onTap: () => onNavigate(item.routeName),
                     ),
                     if (isSelected)
                       Positioned(
