@@ -24,35 +24,41 @@ class MainShell extends ConsumerWidget {
     final navItems = _navItems(user);
     final themeMode = ref.watch(themeModeProvider);
     final themeIcon = _themeIcon(themeMode);
+    final selectedIndex = _selectedIndex(currentLocation, navItems);
 
     return Scaffold(
+      // Mobile app bar: page title + theme toggle + avatar shortcut
       appBar: isWide
           ? null
           : AppBar(
-              title: const Text(
-                'Stratos LMS',
-                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5),
+              title: Text(
+                selectedIndex >= 0 ? navItems[selectedIndex].label : 'Stratos',
+                style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5),
               ),
               actions: [
                 IconButton(
                   icon: Icon(themeIcon),
                   onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
                 ),
+                _MobileAvatarButton(user: user),
+                const SizedBox(width: 8),
               ],
             ),
-      drawer: isWide
+
+      // Mobile: persistent bottom navigation bar (reference design style)
+      bottomNavigationBar: isWide
           ? null
-          : Drawer(
-              child: _ShellDrawer(
-                user: user,
-                navItems: navItems,
-                currentLocation: currentLocation,
-                onNavigate: (routeName) => context.goNamed(routeName),
-                onLogout: () => ref.read(authControllerProvider.notifier).logout(),
-                onToggleTheme: () => ref.read(themeModeProvider.notifier).toggle(),
-                themeIcon: themeIcon,
-              ),
+          : NavigationBar(
+              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+              onDestinationSelected: (i) => context.goNamed(navItems[i].routeName),
+              destinations: navItems
+                  .map((item) => NavigationDestination(
+                        icon: Icon(item.icon),
+                        label: item.label,
+                      ))
+                  .toList(),
             ),
+
       body: SafeArea(
         child: Row(
           children: [
@@ -78,51 +84,47 @@ class MainShell extends ConsumerWidget {
     final isAdmin = user?.role == 'admin';
 
     return [
-      _NavItem(
-        icon: Icons.dashboard_outlined,
-        label: 'Dashboard',
-        routeName: 'home',
-        matches: const ['/'],
-      ),
-      _NavItem(
-        icon: Icons.school_outlined,
-        label: isInstructor ? 'My Academy' : 'Academy',
-        routeName: 'courses',
-        matches: const ['/courses'],
-      ),
-      _NavItem(
-        icon: Icons.forum_outlined,
-        label: 'Messages',
-        routeName: 'messages',
-        matches: const ['/messages'],
-      ),
-      _NavItem(
-        icon: Icons.campaign_outlined,
-        label: 'Announcements',
-        routeName: 'announcements',
-        matches: const ['/announcements'],
-      ),
+      _NavItem(icon: Icons.dashboard_outlined, label: 'Home', routeName: 'home', matches: const ['/']),
+      _NavItem(icon: Icons.school_outlined, label: isInstructor ? 'Academy' : 'Courses', routeName: 'courses', matches: const ['/courses']),
+      _NavItem(icon: Icons.forum_outlined, label: 'Messages', routeName: 'messages', matches: const ['/messages']),
+      _NavItem(icon: Icons.campaign_outlined, label: 'Announce', routeName: 'announcements', matches: const ['/announcements']),
       if (isInstructor)
-        _NavItem(
-          icon: Icons.analytics_outlined,
-          label: 'Reports',
-          routeName: 'reports',
-          matches: const ['/reports'],
-        ),
+        _NavItem(icon: Icons.analytics_outlined, label: 'Reports', routeName: 'reports', matches: const ['/reports']),
       if (isAdmin)
-        _NavItem(
-          icon: Icons.admin_panel_settings_outlined,
-          label: 'Admin',
-          routeName: 'admin',
-          matches: const ['/admin'],
-        ),
-      _NavItem(
-        icon: Icons.settings_outlined,
-        label: 'Settings',
-        routeName: 'settings',
-        matches: const ['/settings'],
-      ),
+        _NavItem(icon: Icons.admin_panel_settings_outlined, label: 'Admin', routeName: 'admin', matches: const ['/admin']),
+      _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', routeName: 'settings', matches: const ['/settings']),
     ];
+  }
+}
+
+// Small avatar in mobile AppBar — taps to profile/settings
+class _MobileAvatarButton extends ConsumerWidget {
+  const _MobileAvatarButton({required this.user});
+
+  final AppUser? user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
+    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    final serverBaseUrl = ref.watch(serverBaseUrlProvider);
+
+    return GestureDetector(
+      onTap: () => context.goNamed('settings'),
+      child: SafeAvatar(
+        imageUrl: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+            ? (user!.avatarUrl!.startsWith('http')
+                ? user!.avatarUrl!
+                : '$serverBaseUrl${user!.avatarUrl!.startsWith('/') ? '' : '/'}${user!.avatarUrl!}')
+            : null,
+        radius: 16,
+        backgroundColor: accentColor.withValues(alpha: 0.15),
+        fallbackText: _safeInitial(user),
+        fallbackTextColor: accentColor,
+        fontSize: 11,
+      ),
+    );
   }
 }
 
@@ -153,190 +155,120 @@ class _ShellRail extends ConsumerWidget {
     final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
 
     return Container(
-      width: 280,
+      width: 260,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          right: BorderSide(color: theme.colorScheme.outline, width: 0.5),
-        ),
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 20,
+                  offset: const Offset(4, 0),
+                ),
+              ],
       ),
       child: Column(
         children: [
+          // Logo / brand
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
             child: Row(
               children: [
-                Icon(Icons.auto_stories_rounded, color: theme.colorScheme.primary, size: 32),
-                const SizedBox(width: 14),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
                 Text(
-                  'Stratos', 
+                  'Stratos',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1.0,
                     color: theme.colorScheme.onSurface,
+                    fontSize: 20,
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.bolt_rounded, color: theme.colorScheme.primary, size: 18),
+                IconButton(
+                  icon: Icon(_themeIcon(ref.watch(themeModeProvider)),
+                      color: theme.colorScheme.onSurfaceVariant, size: 20),
+                  onPressed: onToggleTheme,
+                  tooltip: 'Toggle theme',
                 ),
               ],
             ),
           ),
+
+          // Nav items
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: navItems.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              separatorBuilder: (_, __) => const SizedBox(height: 2),
               itemBuilder: (context, index) {
                 final item = navItems[index];
                 final isSelected = _matchesLocation(currentLocation, item.matches);
-                return Stack(
-                  children: [
-                    Material(
-                      color: Colors.transparent,
-                      child: ListTile(
-                        leading: Icon(
-                          item.icon,
-                          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                          size: 22,
-                        ),
-                        title: Text(
-                          item.label,
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                            fontSize: 14,
+                return Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => onNavigate(item.routeName),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? accentColor.withValues(alpha: isDark ? 0.15 : 0.08)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            item.icon,
+                            color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
+                            size: 20,
                           ),
-                        ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        selected: isSelected,
-                        selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
-                        onTap: () => onNavigate(item.routeName),
+                          const SizedBox(width: 12),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                              color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            const Spacer(),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (isSelected)
-                      Positioned(
-                        left: 0,
-                        top: 12,
-                        bottom: 12,
-                        child: Container(
-                          width: 4,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 );
               },
             ),
           ),
-          _ShellProfileCard(user: user, onLogout: onLogout),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
 
-class _ShellDrawer extends ConsumerWidget {
-  const _ShellDrawer({
-    required this.user,
-    required this.navItems,
-    required this.currentLocation,
-    required this.onNavigate,
-    required this.onLogout,
-    required this.onToggleTheme,
-    required this.themeIcon,
-  });
-
-  final AppUser? user;
-  final List<_NavItem> navItems;
-  final String currentLocation;
-  final ValueChanged<String> onNavigate;
-  final VoidCallback onLogout;
-  final VoidCallback onToggleTheme;
-  final IconData themeIcon;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
-    final serverBaseUrl = ref.watch(serverBaseUrlProvider);
-
-    return Container(
-      color: theme.colorScheme.surfaceContainer,
-      child: ListView(
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.08),
-            ),
-            child: Stack(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SafeAvatar(
-                      imageUrl: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                          ? (user!.avatarUrl!.startsWith('http')
-                              ? user!.avatarUrl!
-                              : '$serverBaseUrl${user!.avatarUrl!.startsWith('/') ? '' : '/'}${user!.avatarUrl!}')
-                          : null,
-                      radius: 24,
-                      backgroundColor: accentColor.withValues(alpha: 0.14),
-                      fallbackText: _safeInitial(user),
-                      fallbackTextColor: accentColor,
-                    ),
-                    const SizedBox(height: 12),
-                    Flexible(child: Text(user?.displayName ?? 'User', style: theme.textTheme.titleLarge, overflow: TextOverflow.ellipsis)),
-                    Text(user?.role.toUpperCase() ?? 'STUDENT', style: theme.textTheme.labelMedium),
-                  ],
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    onPressed: onToggleTheme,
-                    icon: Icon(themeIcon),
-                    tooltip: 'Toggle theme',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          for (final item in navItems)
-            ListTile(
-              leading: Icon(item.icon),
-              title: Text(item.label),
-              selected: _matchesLocation(currentLocation, item.matches),
-              selectedTileColor: accentColor.withValues(alpha: 0.1),
-              onTap: () {
-                Navigator.pop(context);
-                onNavigate(item.routeName);
-              },
-            ),
-          const Divider(height: 1),
+          // Profile card at bottom of rail
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _ShellProfileCard(
-              user: user,
-              onLogout: () {
-                Navigator.pop(context);
-                onLogout();
-              },
-              logoutLabel: 'Sign out',
-            ),
+            child: _RailProfileCard(user: user, onLogout: onLogout),
           ),
         ],
       ),
@@ -344,29 +276,28 @@ class _ShellDrawer extends ConsumerWidget {
   }
 }
 
-class _ShellProfileCard extends ConsumerWidget {
-  const _ShellProfileCard({
-    required this.user,
-    required this.onLogout,
-    this.logoutLabel = 'Logout',
-  });
+class _RailProfileCard extends ConsumerWidget {
+  const _RailProfileCard({required this.user, required this.onLogout});
 
   final AppUser? user;
   final VoidCallback onLogout;
-  final String logoutLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accentColor = user?.role == 'instructor' || user?.role == 'admin' ? AppColors.primary : AppColors.secondary;
+    final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
+    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
     final serverBaseUrl = ref.watch(serverBaseUrlProvider);
 
-    return MinimalContainer(
+    return Container(
       padding: const EdgeInsets.all(12),
-      borderRadius: 16,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      showBorder: false,
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkCard
+            : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           SafeAvatar(
@@ -375,32 +306,44 @@ class _ShellProfileCard extends ConsumerWidget {
                     ? user!.avatarUrl!
                     : '$serverBaseUrl${user!.avatarUrl!.startsWith('/') ? '' : '/'}${user!.avatarUrl!}')
                 : null,
-            radius: 16,
-            backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            radius: 18,
+            backgroundColor: accentColor.withValues(alpha: 0.15),
             fallbackText: _safeInitial(user),
-            fallbackTextColor: theme.colorScheme.onSurface,
+            fallbackTextColor: accentColor,
             fontSize: 12,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(
-                  child: Text(
-                    user?.displayName ?? 'User', 
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  user?.displayName ?? 'User',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  user?.role.toUpperCase() ?? 'STUDENT',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.more_vert, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5), size: 18),
+          IconButton(
+            icon: Icon(Icons.logout_rounded,
+                size: 18, color: theme.colorScheme.onSurfaceVariant),
+            tooltip: 'Sign out',
+            onPressed: onLogout,
+          ),
         ],
       ),
     );
@@ -419,6 +362,13 @@ class _NavItem {
   final String label;
   final String routeName;
   final List<String> matches;
+}
+
+int _selectedIndex(String location, List<_NavItem> items) {
+  for (int i = 0; i < items.length; i++) {
+    if (_matchesLocation(location, items[i].matches)) return i;
+  }
+  return 0;
 }
 
 String _safeInitial(AppUser? user) {

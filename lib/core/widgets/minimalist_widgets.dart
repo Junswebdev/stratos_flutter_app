@@ -29,33 +29,32 @@ class MinimalContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accentColor = theme.colorScheme.primary;
+
+    // In light mode: white card with soft drop shadow (reference design style)
+    // In dark mode: dark card with subtle border
+    final effectiveColor = color ?? (isDark ? AppColors.darkCard : Colors.white);
+    final hasBorder = showBorder || isDark;
 
     return Container(
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? theme.cardTheme.color,
+        color: effectiveColor,
         shape: shape,
         borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(borderRadius),
-        border: (showBorder || isDark || showHighlighter) 
-            ? Border.all(
-                color: showHighlighter 
-                    ? accentColor.withValues(alpha: isDark ? 0.4 : 0.1) 
-                    : theme.colorScheme.outline, 
-                width: showHighlighter ? 1.5 : 1,
-              ) 
+        border: hasBorder
+            ? Border.all(color: theme.colorScheme.outline, width: 1)
             : null,
-        boxShadow: (showShadow || showHighlighter) ? [
-          BoxShadow(
-            color: showHighlighter 
-                ? accentColor.withValues(alpha: isDark ? 0.12 : 0.05) 
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: showHighlighter ? 40 : 20,
-            offset: const Offset(0, 12),
-            spreadRadius: showHighlighter ? 2 : 0,
-          )
-        ] : null,
+        boxShadow: (!isDark && (showShadow || showHighlighter))
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                  spreadRadius: 0,
+                ),
+              ]
+            : null,
       ),
       child: child,
     );
@@ -227,29 +226,34 @@ class MinimalStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
-    // Use pastel color for background if provided or based on label
-    final bgColor = isDark 
-        ? theme.colorScheme.surfaceContainerHighest 
+
+    final bgColor = isDark
+        ? AppColors.darkCard
         : (color ?? getPastelColor(label));
 
+    // Derive an icon/accent color from the pastel background
+    final accentColor = isDark ? theme.colorScheme.primary : AppColors.primary;
+
     return MinimalContainer(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       color: bgColor,
-      borderRadius: 32,
+      borderRadius: 24,
+      showHighlighter: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              icon, 
-              color: isDark ? theme.colorScheme.primary : Colors.black87, 
-              size: 24,
+              icon,
+              color: isDark ? theme.colorScheme.primary : AppColors.primary,
+              size: 22,
             ),
           ),
           const Spacer(),
@@ -257,7 +261,8 @@ class MinimalStatCard extends StatelessWidget {
             label,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: isDark ? theme.colorScheme.onSurfaceVariant : Colors.black54,
+              fontSize: 12,
+              color: isDark ? theme.colorScheme.onSurfaceVariant : AppColors.textBody,
             ),
           ),
           const SizedBox(height: 4),
@@ -265,7 +270,8 @@ class MinimalStatCard extends StatelessWidget {
             value,
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w900,
-              color: isDark ? theme.colorScheme.onSurface : Colors.black,
+              fontSize: 28,
+              color: isDark ? theme.colorScheme.onSurface : AppColors.textHeader,
             ),
           ),
         ],

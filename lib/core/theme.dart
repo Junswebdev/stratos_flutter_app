@@ -1,41 +1,59 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Modern Violet + Cyan palette
-  static const Color primary = Color(0xFF7C3AED);    // Violet-600 — instructor accent
-  static const Color secondary = Color(0xFF0891B2);  // Cyan-600 — student accent
-  static const Color success = Color(0xFF059669);    // Emerald-600
-  static const Color danger = Color(0xFFDC2626);     // Red-600
-  static const Color warning = Color(0xFFD97706);    // Amber-600
-  static const Color orange = Color(0xFFEA580C);     // Orange-600
+  // Reference design palette
+  static const Color primary = Color(0xFFF06060);    // Coral-red — instructor accent
+  static const Color secondary = Color(0xFF4ECDC4);  // Teal — student accent
+  static const Color amber = Color(0xFFFFCA28);      // Warm amber accent
+  static const Color purple = Color(0xFF9575CD);     // Soft purple accent
+  static const Color success = Color(0xFF4CAF50);
+  static const Color danger = Color(0xFFEF5350);
+  static const Color warning = Color(0xFFFFB300);
+  static const Color orange = Color(0xFFEA580C);
   static const Color netflixRed = Color(0xFFE50914);
 
-  // Dark card tints
+  // Light mode
+  static const Color background = Color(0xFFEEF2F7);   // Light blue-gray (reference bg)
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color border = Color(0xFFE8EDF5);
+  static const Color textHeader = Color(0xFF1E2D4A);   // Dark navy
+  static const Color textBody = Color(0xFF3D4E67);
+  static const Color textSecondary = Color(0xFF8A99B0);
+
+  // Light mode stat card pastels (soft tints for dashboard tiles)
+  static const Color pastelCoral = Color(0xFFFDE8E8);
+  static const Color pastelBlue = Color(0xFFE8EEFF);
+  static const Color pastelAmber = Color(0xFFFFF3E0);
+  static const Color pastelTeal = Color(0xFFE0F7F4);
+  static const Color pastelPurple = Color(0xFFF3E8FF);
+
+  // Dark mode
+  static const Color darkBackground = Color(0xFF0F1117);
+  static const Color darkSurface = Color(0xFF171B26);
+  static const Color darkCard = Color(0xFF1E2333);
+  static const Color darkBorder = Color(0xFF2A3147);
+  static const Color darkTextHeader = Color(0xFFF0F4FF);
+  static const Color darkTextBody = Color(0xFFB8C4D8);
+  static const Color darkTextSecondary = Color(0xFF6E7D96);
+
+  // Dark mode card tints
   static const Color cardLavender = Color(0xFF1E1539);
   static const Color cardBlue = Color(0xFF0A1628);
   static const Color cardPeach = Color(0xFF2D0A0F);
   static const Color cardMint = Color(0xFF051F18);
   static const Color cardAmber = Color(0xFF1F0E00);
 
-  // Light mode
-  static const Color background = Color(0xFFF5F3FF);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color card = Color(0xFFFFFFFF);
-  static const Color border = Color(0xFFEDE9FE);
-  static const Color textHeader = Color(0xFF1E0A3C);
-  static const Color textBody = Color(0xFF3B2F6E);
-  static const Color textSecondary = Color(0xFF6D5FA6);
-
-  // Dark mode — Deep Space
-  static const Color darkBackground = Color(0xFF08071A);
-  static const Color darkSurface = Color(0xFF100F26);
-  static const Color darkCard = Color(0xFF16152E);
-  static const Color darkBorder = Color(0xFF2D2A50);
-  static const Color darkTextHeader = Color(0xFFF0EDFF);
-  static const Color darkTextBody = Color(0xFFC4BCF0);
-  static const Color darkTextSecondary = Color(0xFF8F87C2);
-
   static const Color white = Colors.white;
+
+  // Light pastels used by MinimalStatCard
+  static const List<Color> cardPastels = [
+    pastelCoral,
+    pastelBlue,
+    pastelAmber,
+    pastelTeal,
+    pastelPurple,
+  ];
 
   static Color getShadowColor(Color base, {double intensity = 0.15}) {
     final hsl = HSLColor.fromColor(base);
@@ -46,14 +64,6 @@ class AppColors {
     final hsl = HSLColor.fromColor(base);
     return hsl.withLightness((hsl.lightness + intensity).clamp(0.0, 1.0)).toColor();
   }
-
-  static const List<Color> cardPastels = [
-    cardLavender,
-    cardBlue,
-    cardPeach,
-    cardMint,
-    cardAmber,
-  ];
 }
 
 class AppTheme {
@@ -65,9 +75,9 @@ class AppTheme {
 
     final colorScheme = isDark
         ? ColorScheme.dark(
-            primary: const Color(0xFFA78BFA),      // Violet-400
+            primary: const Color(0xFFFF8A80),       // Soft coral for dark
             onPrimary: Colors.black,
-            secondary: const Color(0xFF22D3EE),    // Cyan-400
+            secondary: const Color(0xFF80CBC4),     // Soft teal for dark
             onSecondary: Colors.black,
             surface: AppColors.darkSurface,
             onSurface: AppColors.darkTextHeader,
@@ -98,15 +108,15 @@ class AppTheme {
       fontFamilyFallback: const ['SF Pro Display', 'Roboto', 'Helvetica Neue'],
 
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         foregroundColor: colorScheme.onSurface,
         titleTextStyle: TextStyle(
           color: colorScheme.onSurface,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
           letterSpacing: -0.5,
         ),
       ),
@@ -142,20 +152,27 @@ class AppTheme {
         ),
       ),
 
+      // White cards with soft shadow in light mode
       cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainerHighest,
-        elevation: 0,
+        color: isDark ? AppColors.darkCard : Colors.white,
+        elevation: isDark ? 0 : 4,
+        shadowColor: isDark
+            ? Colors.transparent
+            : Colors.black.withValues(alpha: 0.06),
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-          side: BorderSide(color: colorScheme.outline, width: 1),
+          borderRadius: BorderRadius.circular(20),
+          side: isDark
+              ? BorderSide(color: AppColors.darkBorder, width: 1)
+              : BorderSide.none,
         ),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? AppColors.darkSurface : AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        fillColor: isDark ? AppColors.darkCard : Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colorScheme.outline),
@@ -169,7 +186,8 @@ class AppTheme {
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+        hintStyle: TextStyle(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -178,8 +196,10 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          textStyle:
+              const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
         ),
       ),
 
@@ -188,8 +208,10 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle:
+              const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
       ),
 
@@ -198,6 +220,43 @@ class AppTheme {
         foregroundColor: colorScheme.onPrimary,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+
+      // Bottom navigation bar — clean white, matches reference
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+        indicatorColor: isDark
+            ? colorScheme.primary.withValues(alpha: 0.2)
+            : colorScheme.primary.withValues(alpha: 0.1),
+        shadowColor: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+        elevation: 8,
+        height: 64,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(
+                color: isDark
+                    ? colorScheme.primary
+                    : AppColors.textHeader,
+                size: 22);
+          }
+          return IconThemeData(color: colorScheme.onSurfaceVariant, size: 22);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(
+              color:
+                  isDark ? colorScheme.primary : AppColors.textHeader,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+            );
+          }
+          return TextStyle(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+            fontSize: 10,
+          );
+        }),
       ),
     );
   }
@@ -209,4 +268,5 @@ Color getPastelColor(String input) {
 }
 
 Color getGradientColor(String input) => getPastelColor(input);
-List<Color> getCardGradient(String input) => [getPastelColor(input), getPastelColor(input).withValues(alpha: 0.8)];
+List<Color> getCardGradient(String input) =>
+    [getPastelColor(input), getPastelColor(input).withValues(alpha: 0.8)];
