@@ -69,10 +69,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         _answers,
       );
       ref.invalidate(courseProgressProvider(widget.courseId));
-      if (mounted) setState(() {
-        _result = result;
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _isSubmitting = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:stratos_app/core/theme.dart';
 import 'package:stratos_app/core/widgets/minimalist_widgets.dart';
+import 'package:stratos_app/core/socket_service.dart';
 
 import '../../../../data/dio_client.dart';
 import '../../../home/application/home_providers.dart';
@@ -40,7 +40,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   List<ChatMessage> _messages = [];
   StreamSubscription? _subscription;
   bool _isLoading = true;
-  String? _myUserId;
+  DateTime? _peerLastReadAt;
   
   ChatMessage? _replyingTo;
   ChatMessage? _editingMessage;
@@ -50,62 +50,102 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('CHAT SCREEN INIT: courseId=${widget.courseId}, recipientId=${widget.recipientId}');
     _loadHistory();
-    _connect();
+    _subscribeToMessages();
+    
+    // Track which chat is active to suppress notifications
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(chattingWithProvider.notifier).update(widget.courseId ?? widget.recipientId);
+      }
+    });
   }
 
   Future<void> _loadHistory() async {
     setState(() => _isLoading = true);
     try {
       final repo = ref.read(chatRepositoryProvider);
-      List<ChatMessage> history;
-      if (widget.courseId != null) {
+      ChatHistory history;
+      if (widget.courseId != null && widget.courseId!.isNotEmpty) {
         history = await repo.getCourseMessages(widget.courseId!);
         await repo.markAsRead(widget.courseId!);
-      } else if (widget.recipientId != null) {
+      } else if (widget.recipientId != null && widget.recipientId!.isNotEmpty) {
         history = await repo.getDirectMessages(widget.recipientId!);
         await repo.markDirectAsRead(widget.recipientId!);
       } else {
-        history = [];
+        history = const ChatHistory(messages: []);
       }
       if (!mounted) return;
+      
       setState(() {
-        _messages = List.from(history);
+        _messages = List.from(history.messages);
+        _peerLastReadAt = history.peerLastReadAt;
         _isLoading = false;
       });
       _scrollToBottom();
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('FAILED TO LOAD HISTORY: $e');
+      debugPrint(stack.toString());
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
 
-  void _connect() async {
-    final storage = ref.read(secureStorageProvider);
-    final authRepo = ref.read(authRepositoryProvider);
-    final token = await storage.read(key: accessTokenStorageKey);
-    final session = await authRepo.restoreSession();
-    final userId = session?.user?.id;
-    if (token == null || userId == null) return;
+  void _subscribeToMessages() {
+    final repo = ref.read(chatRepositoryProvider);
+    final socketEventStream = ref.read(socketServiceProvider).eventStream;
 
-    if (mounted) setState(() => _myUserId = userId);
-    final stream = ref.read(chatRepositoryProvider).connect(userId, token);
-    _subscription = stream.listen((msg) {
-      final isRelevant = (widget.courseId != null && msg.courseId == widget.courseId) ||
-          (widget.recipientId != null && msg.senderId == widget.recipientId) ||
-          (widget.recipientId != null && msg.recipientId == widget.recipientId);
+    _subscription = socketEventStream.listen((event) {
+      final type = event['type'] as String?;
       
-      if (isRelevant && mounted) {
-        setState(() {
-          final index = _messages.indexWhere((m) => m.id == msg.id);
-          if (index != -1) {
-            _messages[index] = msg;
-          } else {
-            _messages = [..._messages, msg];
-            _scrollToBottom();
+      if (type == 'read_receipt') {
+        final userId = event['user_id'] as String?;
+        if (userId == widget.recipientId) {
+          final timestamp = DateTime.tryParse(event['last_read_at']?.toString() ?? '');
+          if (timestamp != null && mounted) {
+            setState(() {
+              _peerLastReadAt = timestamp;
+            });
           }
-        });
+        }
+        return;
+      }
+
+      if (type == 'message' || type == 'reaction' || type == 'edit' || type == 'delete') {
+        try {
+          final msg = ChatMessage.fromJson(event);
+          final myId = ref.read(authRepositoryProvider).currentUserId;
+          
+          final isRelevant = (widget.courseId != null && msg.courseId == widget.courseId) ||
+              (widget.recipientId != null && (msg.senderId == widget.recipientId || msg.recipientId == widget.recipientId));
+          
+          if (isRelevant && mounted) {
+            setState(() {
+              final index = _messages.indexWhere((m) => m.id == msg.id);
+              if (index != -1) {
+                _messages[index] = msg;
+              } else {
+                _messages = [..._messages, msg];
+                _scrollToBottom();
+              }
+            });
+
+            // If we are active in this chat and receive a message from peer, mark it as read
+            if (msg.senderId != myId) {
+               try {
+                 if (widget.courseId != null) {
+                   repo.markAsRead(widget.courseId!);
+                 } else if (widget.recipientId != null) {
+                   repo.markDirectAsRead(widget.recipientId!);
+                 }
+               } catch (_) {}
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing websocket message: $e');
+        }
       }
     });
   }
@@ -237,7 +277,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _textController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
-    ref.read(chatRepositoryProvider).disconnect();
+    
+    // Clear the active chat tracking immediately and safely
+    // Note: We avoid using WidgetsBinding here because it might trigger after unmount
+    ref.read(chattingWithProvider.notifier).update(null);
+    
     super.dispose();
   }
 
@@ -250,7 +294,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ? 'Private conversation'
         : 'Active now';
 
-    final profile = ref.watch(profileProvider).asData?.value;
+    final profile = ref.watch(profileProvider).value;
+    final myId = profile?.id ?? ref.read(authRepositoryProvider).currentUserId;
     final isInstructor = profile?.role == 'instructor' || profile?.role == 'admin';
     final activeColor = isInstructor ? AppColors.primary : AppColors.secondary;
     final serverBaseUrl = ref.watch(serverBaseUrlProvider);
@@ -303,7 +348,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         itemCount: _messages.length,
                         itemBuilder: (ctx, i) {
                           final msg = _messages[i];
-                          final isMe = msg.senderId == _myUserId;
+                          final isMe = msg.senderId == myId;
+                          final isSeen = isMe && _peerLastReadAt != null && msg.timestamp.isBefore(_peerLastReadAt!);
                           
                           final bool showSender = !isMe && (i == 0 || _messages[i-1].senderId != msg.senderId);
                           final bool isLastInGroup = i == _messages.length - 1 || _messages[i+1].senderId != msg.senderId;
@@ -327,7 +373,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           : null,
                                       radius: 14,
                                       backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
-                                      fallbackText: (msg.senderName ?? '?').substring(0, 1).toUpperCase(),
+                                      fallbackText: (msg.senderName ?? '?').isNotEmpty ? msg.senderName![0].toUpperCase() : '?',
                                       fallbackTextColor: theme.colorScheme.onSurfaceVariant,
                                       fontSize: 10,
                                     )
@@ -387,7 +433,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                   if (msg.attachmentUrl != null && msg.isDeleted == null) ...[
                                                     if (!(msg.attachmentUrl != null && msg.content.trim().toLowerCase() == (msg.attachmentName ?? msg.attachmentUrl!.split('/').last).toLowerCase()))
                                                        const SizedBox(height: 8),
-                                                    _buildAttachmentBubble(msg, isMe),
+                                                    _buildAttachmentBubble(msg, isMe, serverBaseUrl),
                                                   ],
                                                   if (msg.isEdited != null && msg.isDeleted == null)
                                                     Padding(
@@ -405,16 +451,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                 bottom: -12,
                                                 right: isMe ? null : -5,
                                                 left: isMe ? -5 : null,
-                                                child: _buildReactionBadge(msg, isDark),
+                                                child: _buildReactionBadge(msg, isDark, myId),
                                               ),
                                           ],
                                         ),
                                         if (isLastInGroup)
                                           Padding(
                                             padding: const EdgeInsets.only(top: 4, right: 4, left: 4),
-                                            child: Text(
-                                              _formatTime(msg.timestamp),
-                                              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  _formatTime(msg.timestamp),
+                                                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                                                ),
+                                                if (isMe) ...[
+                                                  const SizedBox(width: 4),
+                                                  Icon(
+                                                    Icons.done_all_rounded, 
+                                                    size: 12, 
+                                                    color: isSeen ? Colors.blue : activeColor.withValues(alpha: 0.6)
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ),
                                       ],
@@ -466,56 +525,76 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildActiveActionPreview(ThemeData theme, bool isDark) {
-    if (_replyingTo == null && _editingMessage == null) return const SizedBox.shrink();
-
-    final isEditing = _editingMessage != null;
-    final msg = isEditing ? _editingMessage! : _replyingTo!;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          Icon(isEditing ? Icons.edit : Icons.reply, size: 16, color: AppColors.primary),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isEditing ? 'Editing message' : 'Replying to ${msg.senderName ?? 'User'}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  msg.content,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                ),
-              ],
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      transitionBuilder: (child, animation) {
+        return SizeTransition(
+          sizeFactor: animation,
+          axisAlignment: -1.0,
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      child: (_replyingTo == null && _editingMessage == null)
+          ? const SizedBox.shrink()
+          : Container(
+              key: ValueKey(_editingMessage?.id ?? _replyingTo?.id ?? 'none'),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHigh,
+                border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _editingMessage != null ? Icons.edit : Icons.reply, 
+                    size: 18, 
+                    color: theme.colorScheme.primary
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _editingMessage != null 
+                              ? 'Editing message' 
+                              : 'Replying to ${_replyingTo?.senderName ?? 'User'}',
+                          style: TextStyle(
+                            fontSize: 12, 
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary
+                          ),
+                        ),
+                        Text(
+                          (_editingMessage ?? _replyingTo)?.content ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _replyingTo = null;
+                        if (_editingMessage != null) {
+                          _editingMessage = null;
+                          _textController.clear();
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 18),
-            onPressed: () {
-              setState(() {
-                _replyingTo = null;
-                if (_editingMessage != null) {
-                  _editingMessage = null;
-                  _textController.clear();
-                }
-              });
-            },
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildMoreButton(ChatMessage msg) {
+    final myId = ref.read(authRepositoryProvider).currentUserId;
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
       tooltip: 'Message actions',
@@ -533,15 +612,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         const PopupMenuItem(value: 'react', child: Row(children: [Icon(Icons.add_reaction_outlined, size: 18), SizedBox(width: 8), Text('React')])),
         const PopupMenuItem(value: 'reply', child: Row(children: [Icon(Icons.reply_outlined, size: 18), SizedBox(width: 8), Text('Reply')])),
         const PopupMenuItem(value: 'copy', child: Row(children: [Icon(Icons.copy_rounded, size: 18), SizedBox(width: 8), Text('Copy')])),
-        if (msg.senderId == _myUserId)
+        if (msg.senderId == myId)
           const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Edit')])),
-        if (msg.senderId == _myUserId)
+        if (msg.senderId == myId)
           const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.danger), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.danger))])),
       ],
     );
   }
 
-  Widget _buildReactionBadge(ChatMessage msg, bool isDark) {
+  Widget _buildReactionBadge(ChatMessage msg, bool isDark, String? myId) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -595,7 +674,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildAttachmentBubble(ChatMessage msg, bool isMe) {
+  Widget _buildAttachmentBubble(ChatMessage msg, bool isMe, String serverBaseUrl) {
     final theme = Theme.of(context);
     final attachmentName = msg.attachmentName ?? msg.attachmentUrl!.split('/').last;
     final isImage = (msg.attachmentType ?? '').toLowerCase() == 'image' ||
@@ -605,10 +684,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         attachmentName.toLowerCase().endsWith('.webp') ||
         attachmentName.toLowerCase().endsWith('.gif');
 
-    final serverBaseUrl = ref.read(serverBaseUrlProvider);
     final fullUrl = msg.attachmentUrl!.startsWith('http')
         ? msg.attachmentUrl!
-        : '$serverBaseUrl${msg.attachmentUrl!}';
+        : '$serverBaseUrl${msg.attachmentUrl!.startsWith('/') ? '' : '/'}${msg.attachmentUrl!}';
 
     return GestureDetector(
       onTap: () async {
@@ -703,9 +781,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _reactionItem(String emoji, String type, ChatMessage msg) {
+    final myId = ref.read(authRepositoryProvider).currentUserId;
     final hasReacted = type == 'like' 
-        ? msg.likes.contains(_myUserId)
-        : msg.dislikes.contains(_myUserId);
+        ? msg.likes.contains(myId)
+        : msg.dislikes.contains(myId);
 
     return GestureDetector(
       onTap: () {

@@ -324,7 +324,6 @@ class _CourseCard extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       borderRadius: 32,
       color: theme.colorScheme.surfaceContainerHighest,
-      showHighlighter: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(32),

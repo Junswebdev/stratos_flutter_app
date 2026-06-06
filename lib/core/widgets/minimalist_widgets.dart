@@ -32,10 +32,6 @@ class MinimalContainer extends StatelessWidget {
 
     final effectiveColor = color ?? (isDark ? AppColors.darkCard : Colors.white);
 
-    // showHighlighter (default true) gates border+shadow in light mode.
-    // Dark mode always gets a border regardless.
-    final wantsStyling = showHighlighter || showShadow || showBorder;
-
     return Container(
       margin: margin,
       padding: padding,
@@ -43,22 +39,10 @@ class MinimalContainer extends StatelessWidget {
         color: effectiveColor,
         shape: shape,
         borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(borderRadius),
-        border: (isDark || wantsStyling)
-            ? Border.all(
-                color: isDark ? theme.colorScheme.outline : AppColors.border,
-                width: isDark ? 1.0 : 0.8,
-              )
-            : null,
-        boxShadow: (!isDark && wantsStyling)
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 6),
-                  spreadRadius: 0,
-                ),
-              ]
-            : null,
+        border: Border.all(
+          color: isDark ? theme.colorScheme.outline : AppColors.border,
+          width: 1.5,
+        ),
       ),
       child: child,
     );

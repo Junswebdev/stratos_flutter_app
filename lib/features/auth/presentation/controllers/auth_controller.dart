@@ -15,11 +15,10 @@ class AuthState {
 
 // Controller to manage Auth state using AsyncNotifier
 class AuthController extends AsyncNotifier<AuthState> {
-  late final AuthRepository _repository;
+  AuthRepository get _repository => ref.read(authRepositoryProvider);
 
   @override
   Future<AuthState> build() async {
-    _repository = ref.watch(authRepositoryProvider);
     final token = await _repository.accessToken();
     if (token != null) {
       try {

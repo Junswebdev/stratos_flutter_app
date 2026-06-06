@@ -20,6 +20,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 class AuthRepository {
   final Dio dio;
   final FlutterSecureStorage storage;
+  static String? _cachedUserId;
 
   const AuthRepository({required this.dio, required this.storage});
 
@@ -40,6 +41,7 @@ class AuthRepository {
         data: <String, dynamic>{'email': email.trim(), 'password': password},
       );
       final session = AuthSessionModel.fromJson(response.data);
+      _cachedUserId = session.user?.id;
       await _persistSession(session);
       return session;
     } on DioException catch (e) {
@@ -84,7 +86,8 @@ class AuthRepository {
           'is_active': true,
         },
       );
-      return UserModel.fromJson(response.data);
+      final user = UserModel.fromJson(response.data);
+      return user;
     } on DioException catch (e) {
       throw Exception(_extractApiErrorMessage(e.response?.data, fallbackMessage: 'Registration failed'));
     }
@@ -94,6 +97,7 @@ class AuthRepository {
     try {
       final response = await dio.get<dynamic>('users/me');
       final user = UserModel.fromJson(response.data);
+      _cachedUserId = user.id;
       await _persistCachedUser(user);
       return user;
     } on DioException catch (e) {
@@ -126,6 +130,7 @@ class AuthRepository {
       final response = await dio.patch<dynamic>('users/$userId', data: data);
       try {
         final user = UserModel.fromJson(response.data);
+        _cachedUserId = user.id;
         await _persistCachedUser(user);
         return user;
       } catch (_) {
@@ -154,6 +159,7 @@ class AuthRepository {
         data: formData,
       );
       final user = UserModel.fromJson(response.data);
+      _cachedUserId = user.id;
       await _persistCachedUser(user);
       return user;
     } on DioException catch (e) {
@@ -173,6 +179,7 @@ class AuthRepository {
     if (cachedUserJson != null && cachedUserJson.isNotEmpty) {
       try {
         user = UserModel.fromJson(jsonDecode(cachedUserJson));
+        _cachedUserId = user.id;
       } catch (_) {
         user = null;
       }
@@ -189,7 +196,10 @@ class AuthRepository {
     return storage.read(key: accessTokenStorageKey);
   }
 
+  String? get currentUserId => _cachedUserId;
+
   Future<void> logout() async {
+    _cachedUserId = null;
     const keys = [
       'stratos_access_token',
       'stratos_refresh_token',
@@ -228,18 +238,6 @@ class AuthRepository {
     await storage.write(
       key: userCacheStorageKey,
       value: jsonEncode(user.toJson()),
-    );
-  }
-
-  void _throwIfApiError(
-    Response<dynamic> response, {
-    required String fallbackMessage,
-  }) {
-    if (response.statusCode != null && response.statusCode! < 400) {
-      return;
-    }
-    throw Exception(
-      _extractApiErrorMessage(response.data, fallbackMessage: fallbackMessage),
     );
   }
 

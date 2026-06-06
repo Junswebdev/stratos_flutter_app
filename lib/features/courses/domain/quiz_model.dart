@@ -36,12 +36,12 @@ class QuizQuestionModel {
 
   factory QuizQuestionModel.fromJson(Map<String, dynamic> json) {
     return QuizQuestionModel(
-      id: json['id'] as String,
-      questionText: json['question_text'] as String,
-      type: QuestionType.fromJson(json['question_type'] as String),
-      data: json['question_data'] as Map<String, dynamic>,
-      explanation: json['explanation'] as String?,
-      order: json['order'] as int? ?? 0,
+      id: json['id']?.toString() ?? "",
+      questionText: json['question_text']?.toString() ?? "",
+      type: QuestionType.fromJson(json['question_type']?.toString() ?? "multiple_choice"),
+      data: json['question_data'] is Map ? Map<String, dynamic>.from(json['question_data'] as Map) : {},
+      explanation: json['explanation']?.toString(),
+      order: json['order'] is int ? json['order'] as int : 0,
     );
   }
 
@@ -70,13 +70,14 @@ class QuizModel {
   });
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
+    final questionsList = json['questions'] as List<dynamic>? ?? [];
     return QuizModel(
-      id: json['id'] as String,
-      lessonId: json['lesson_id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String?,
-      questions: (json['questions'] as List<dynamic>)
-          .map((q) => QuizQuestionModel.fromJson(q as Map<String, dynamic>))
+      id: json['id']?.toString() ?? "",
+      lessonId: json['lesson_id']?.toString() ?? "",
+      title: json['title']?.toString() ?? "Untitled Quiz",
+      description: json['description']?.toString(),
+      questions: questionsList
+          .map((q) => QuizQuestionModel.fromJson(Map<String, dynamic>.from(q as Map)))
           .toList(),
     );
   }
@@ -105,14 +106,16 @@ class QuizAttemptModel {
 
   factory QuizAttemptModel.fromJson(Map<String, dynamic> json) {
     return QuizAttemptModel(
-      id: json['id'] as String,
-      score: (json['score'] as num).toDouble(),
-      totalPoints: json['total_points'] as int,
-      answers: json['answers'] as List<dynamic>,
-      instructorFeedback: json['instructor_feedback'] as String?,
-      studentName: json['student_name'] as String?,
-      studentEmail: json['student_email'] as String?,
-      completedAt: DateTime.parse(json['completed_at'] as String),
+      id: json['id']?.toString() ?? "",
+      score: (json['score'] as num?)?.toDouble() ?? 0.0,
+      totalPoints: json['total_points'] as int? ?? 0,
+      answers: json['answers'] as List<dynamic>? ?? [],
+      instructorFeedback: json['instructor_feedback']?.toString(),
+      studentName: json['student_name']?.toString(),
+      studentEmail: json['student_email']?.toString(),
+      completedAt: json['completed_at'] != null 
+          ? DateTime.parse(json['completed_at'].toString()) 
+          : DateTime.now(),
     );
   }
 }

@@ -164,7 +164,7 @@ class _CreateCourseScreenState extends ConsumerState<CreateCourseScreen> {
 
               // Education level
               DropdownButtonFormField<EduLevel>(
-                value: _eduLevel,
+                initialValue: _eduLevel,
                 decoration: const InputDecoration(labelText: 'Education Level'),
                 items: const [
                   DropdownMenuItem(value: EduLevel.primary, child: Text('Primary')),

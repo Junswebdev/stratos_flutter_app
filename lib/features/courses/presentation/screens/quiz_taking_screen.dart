@@ -141,7 +141,9 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
                 return RadioListTile<int>(
                   title: Text(text),
                   value: idx,
+                  // ignore: deprecated_member_use
                   groupValue: _userAnswers[q.id] as int?,
+                  // ignore: deprecated_member_use
                   onChanged: (val) => setState(() => _userAnswers[q.id] = val),
                   contentPadding: EdgeInsets.zero,
                 );

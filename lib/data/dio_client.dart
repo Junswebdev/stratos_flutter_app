@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -6,8 +7,9 @@ const String accessTokenStorageKey = 'stratos_access_token';
 const String refreshTokenStorageKey = 'stratos_refresh_token';
 const String userCacheStorageKey = 'stratos_cached_user';
 
-const String _defaultApiBaseUrl =
-    String.fromEnvironment('API_BASE_URL', defaultValue: 'https://stratos-fastapi-backend.onrender.com');
+String get _defaultApiBaseUrl {
+  return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
+}
 
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
@@ -70,7 +72,7 @@ final dioProvider = dioClientProvider;
 String _normalizeApiBaseUrl(String baseUrl) {
   final trimmed = baseUrl.trim();
   if (trimmed.isEmpty) {
-    return 'http://localhost:8000/api/v1/';
+    return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
   }
 
   final uri = Uri.parse(trimmed);

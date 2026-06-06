@@ -18,6 +18,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _pageController = PageController(initialPage: 0);
   bool _obscurePassword = true;
   UserRole _selectedRole = UserRole.student;
 
@@ -26,6 +27,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -70,7 +72,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
@@ -87,7 +88,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             Expanded(
               flex: 4,
-              child: _buildRegisterForm(theme, authState, true),
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final authState = ref.watch(authControllerProvider);
+                  return _buildRegisterForm(theme, authState, true);
+                },
+              ),
             ),
           ],
         ),
@@ -99,9 +105,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: PageView(
+        controller: _pageController,
         children: [
           _buildIntroSection(theme, isMobile: true),
-          _buildRegisterForm(theme, authState, false),
+          Consumer(
+            builder: (context, ref, _) {
+              final authState = ref.watch(authControllerProvider);
+              return _buildRegisterForm(theme, authState, false);
+            },
+          ),
         ],
       ),
     );
@@ -151,8 +163,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withOpacity(0.3),
-                Colors.black.withOpacity(0.7),
+                Colors.black.withValues(alpha: 0.3),
+                Colors.black.withValues(alpha: 0.7),
               ],
             ),
           ),
@@ -288,7 +300,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               MinimalContainer(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: DropdownButtonFormField<UserRole>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   dropdownColor: isDark ? AppColors.darkSurface : Colors.white,
                   decoration: InputDecoration(
                     labelText: 'Role',

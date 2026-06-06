@@ -21,12 +21,12 @@ class AppColors {
   static const Color textBody = Color(0xFF3D4E67);
   static const Color textSecondary = Color(0xFF8A99B0);
 
-  // Light mode stat card pastels (soft tints for dashboard tiles)
-  static const Color pastelCoral = Color(0xFFFDE8E8);
-  static const Color pastelBlue = Color(0xFFE8EEFF);
-  static const Color pastelAmber = Color(0xFFFFF3E0);
-  static const Color pastelTeal = Color(0xFFE0F7F4);
-  static const Color pastelPurple = Color(0xFFF3E8FF);
+  // Light mode stat card solid colors (more vibrant than pastels)
+  static const Color pastelCoral = Color(0xFFFCA5A5); // Lighter primary
+  static const Color pastelBlue = Color(0xFF93C5FD);  // Lighter blue
+  static const Color pastelAmber = Color(0xFFFCD34D); // Lighter amber
+  static const Color pastelTeal = Color(0xFF5EEAD4);  // Lighter secondary
+  static const Color pastelPurple = Color(0xFFC4B5FD); // Lighter purple
 
   // Dark mode
   static const Color darkBackground = Color(0xFF0F1117);
@@ -37,16 +37,16 @@ class AppColors {
   static const Color darkTextBody = Color(0xFFB8C4D8);
   static const Color darkTextSecondary = Color(0xFF6E7D96);
 
-  // Dark mode card tints
-  static const Color cardLavender = Color(0xFF1E1539);
-  static const Color cardBlue = Color(0xFF0A1628);
-  static const Color cardPeach = Color(0xFF2D0A0F);
-  static const Color cardMint = Color(0xFF051F18);
-  static const Color cardAmber = Color(0xFF1F0E00);
+  // Dark mode card solid tints
+  static const Color cardLavender = Color(0xFF4C1D95);
+  static const Color cardBlue = Color(0xFF1E3A8A);
+  static const Color cardPeach = Color(0xFF7F1D1D);
+  static const Color cardMint = Color(0xFF064E3B);
+  static const Color cardAmber = Color(0xFF78350F);
 
   static const Color white = Colors.white;
 
-  // Light pastels used by MinimalStatCard
+  // Solid colors used by MinimalStatCard
   static const List<Color> cardPastels = [
     pastelCoral,
     pastelBlue,
@@ -152,19 +152,18 @@ class AppTheme {
         ),
       ),
 
-      // White cards with soft shadow in light mode
+      // Solid colored cards (no shadow, with defined border)
       cardTheme: CardThemeData(
         color: isDark ? AppColors.darkCard : Colors.white,
-        elevation: isDark ? 0 : 4,
-        shadowColor: isDark
-            ? Colors.transparent
-            : Colors.black.withValues(alpha: 0.06),
+        elevation: 0,
+        shadowColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: isDark
-              ? BorderSide(color: AppColors.darkBorder, width: 1)
-              : BorderSide.none,
+          side: BorderSide(
+            color: isDark ? AppColors.darkBorder : AppColors.border,
+            width: 1.5,
+          ),
         ),
       ),
 
@@ -269,4 +268,5 @@ Color getPastelColor(String input) {
 
 Color getGradientColor(String input) => getPastelColor(input);
 List<Color> getCardGradient(String input) =>
-    [getPastelColor(input), getPastelColor(input).withValues(alpha: 0.8)];
+    [getPastelColor(input), getPastelColor(input)];
+

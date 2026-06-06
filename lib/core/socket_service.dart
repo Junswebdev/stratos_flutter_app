@@ -13,12 +13,31 @@ import '../features/auth/data/auth_repository.dart';
 
 final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
+class ChattingWithNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void update(String? value) => state = value;
+}
+
+final chattingWithProvider = NotifierProvider<ChattingWithNotifier, String?>(() {
+  return ChattingWithNotifier();
+});
+
+/// Global stream of raw websocket events
+final socketEventStreamProvider = StreamProvider<Map<String, dynamic>>((ref) {
+  final service = ref.watch(socketServiceProvider);
+  return service.eventStream;
+});
+
 class SocketService {
   final Ref _ref;
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
   bool _isConnected = false;
   bool _isConnecting = false;
+
+  final _eventController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get eventStream => _eventController.stream;
 
   SocketService(this._ref) {
     // Listen for auth state changes to connect/disconnect
@@ -34,6 +53,8 @@ class SocketService {
     });
   }
 
+  String? _currentUserId;
+
   Future<void> _connect() async {
     if (_isConnected || _isConnecting) return;
     _isConnecting = true;
@@ -48,6 +69,7 @@ class SocketService {
       }
 
       final user = await repository.fetchMe();
+      _currentUserId = user.id;
       
       final dio = _ref.read(apiDioProvider);
       var wsUrl = dio.options.baseUrl
@@ -88,19 +110,37 @@ class SocketService {
   void _handleMessage(String data) {
     try {
       final json = jsonDecode(data) as Map<String, dynamic>;
+      _eventController.add(json);
+      
       final type = json['type'] as String?;
 
       if (type == 'stats_update') {
         final statsJson = json['data'] as Map<String, dynamic>;
         final stats = DashboardStats.fromJson(statsJson);
         _ref.read(statsProvider.notifier).updateStats(stats);
+        
+        // Auto-refresh the entire dashboard (enrollments, announcements, courses)
+        _ref.invalidate(dashboardProvider);
       } else if (type == 'message') {
-        final sender = json['sender_name'] ?? 'Someone';
+        final senderId = json['sender_id'] as String?;
+        final senderName = json['sender_name'] ?? 'Someone';
         final content = json['content'] ?? '';
+        final courseId = json['course_id'] as String?;
+
+        // Don't notify if I am the sender
+        if (senderId == _currentUserId) return;
+
+        // Don't notify if I am currently in the chat with this person/course
+        final currentChat = _ref.read(chattingWithProvider);
+        if (currentChat != null) {
+          if (courseId == currentChat || senderId == currentChat) {
+            return;
+          }
+        }
         
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
-            content: Text('New message from $sender: $content'),
+            content: Text('New message from $senderName: $content'),
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(label: 'VIEW', onPressed: () {}),
           ),
@@ -128,6 +168,10 @@ class SocketService {
     _subscription?.cancel();
     _channel?.sink.close();
     _isConnected = false;
+  }
+
+  void sendRaw(String data) {
+    _channel?.sink.add(data);
   }
 }
 

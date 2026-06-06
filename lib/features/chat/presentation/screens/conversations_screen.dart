@@ -318,12 +318,20 @@ class _ConversationTile extends StatelessWidget {
                     TextSpan(
                       children: [
                         TextSpan(
-                          text: '${convo.senderName}: ',
+                          text: '${convo.senderName == ref.read(profileProvider).value?.displayName ? 'You' : convo.senderName}: ',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: isUnread ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
                           ),
                         ),
+                        if (convo.senderName == ref.read(profileProvider).value?.displayName)
+                          const WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: EdgeInsets.only(right: 4.0),
+                              child: Icon(Icons.done_all_rounded, size: 12, color: Colors.grey),
+                            ),
+                          ),
                         TextSpan(
                           text: convo.lastMessage,
                           style: TextStyle(

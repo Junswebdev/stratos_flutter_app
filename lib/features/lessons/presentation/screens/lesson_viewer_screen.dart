@@ -165,7 +165,7 @@ class _ImageContent extends StatelessWidget {
 
   String _buildFullUrl(String path) {
     if (path.startsWith('http')) return path;
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000/api/v1/');
+    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1/');
     // Clean up the URL construction
     final base = baseUrl.replaceAll('/api/v1/', '');
     return '$base$path';
@@ -224,7 +224,7 @@ class _VideoContent extends StatelessWidget {
 
   String _buildFullUrl(String path) {
     if (path.startsWith('http')) return path;
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000/api/v1/');
+    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1/');
     final base = baseUrl.replaceAll('/api/v1/', '');
     return '$base$path';
   }
@@ -276,7 +276,7 @@ class _FileContent extends StatelessWidget {
 
   String _buildFullUrl(String path) {
     if (path.startsWith('http')) return path;
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000/api/v1/');
+    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1/');
     final base = baseUrl.replaceAll('/api/v1/', '');
     return '$base$path';
   }

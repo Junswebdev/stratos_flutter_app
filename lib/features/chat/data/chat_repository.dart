@@ -3,17 +3,20 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../data/dio_client.dart';
 import '../../../data/json_parsing.dart';
+import '../../../core/socket_service.dart';
 
 import 'package:stratos_app/features/auth/presentation/controllers/auth_controller.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   // Watch auth state to ensure repository is recreated on logout/login
   ref.watch(authControllerProvider);
-  return ChatRepository(ref.watch(dioClientProvider));
+  return ChatRepository(
+    ref.watch(dioClientProvider),
+    ref.watch(socketServiceProvider),
+  );
 });
 
 class ChatMessage {
@@ -107,29 +110,35 @@ class ChatMessageReply {
   }
 }
 
+class ChatHistory {
+  final List<ChatMessage> messages;
+  final DateTime? peerLastReadAt;
+
+  const ChatHistory({required this.messages, this.peerLastReadAt});
+}
+
 class ChatRepository {
   final Dio _dio;
-  WebSocketChannel? _channel;
-  StreamController<ChatMessage>? _messageController;
-  StreamSubscription? _subscription;
+  final SocketService _socketService;
 
-  ChatRepository(this._dio);
+  ChatRepository(this._dio, this._socketService);
 
-  String _wsUrl(String userId, String token) {
-    var wsUrl = _dio.options.baseUrl.replaceFirst('https', 'wss').replaceFirst('http', 'ws');
-    final uri = Uri.parse(wsUrl);
-    final rootWs = '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
-    return '$rootWs/ws/$userId?token=$token';
-  }
-
-  Future<List<ChatMessage>> getDirectMessages(String otherUserId) async {
+  Future<ChatHistory> getDirectMessages(String otherUserId) async {
     final response = await _dio.get<dynamic>('chat/history/direct/$otherUserId');
-    return asJsonMapList(response.data).map(ChatMessage.fromJson).toList();
+    final data = unwrapJsonMap(response.data);
+    return ChatHistory(
+      messages: asJsonMapList(data['messages']).map(ChatMessage.fromJson).toList(),
+      peerLastReadAt: readDateTime(data, const ['peer_last_read_at']),
+    );
   }
 
-  Future<List<ChatMessage>> getCourseMessages(String courseId) async {
+  Future<ChatHistory> getCourseMessages(String courseId) async {
     final response = await _dio.get<dynamic>('chat/history/course/$courseId');
-    return asJsonMapList(response.data).map(ChatMessage.fromJson).toList();
+    final data = unwrapJsonMap(response.data);
+    return ChatHistory(
+      messages: asJsonMapList(data['messages']).map(ChatMessage.fromJson).toList(),
+      peerLastReadAt: readDateTime(data, const ['peer_last_read_at']),
+    );
   }
 
   Future<List<Map<String, dynamic>>> getRecentConversations() async {
@@ -155,31 +164,13 @@ class ChatRepository {
     await _dio.post<dynamic>('chat/mark_direct_read/$otherUserId');
   }
 
-  Stream<ChatMessage> connect(String userId, String token) {
-    _messageController?.close();
-    _messageController = StreamController<ChatMessage>.broadcast();
-
-    final url = _wsUrl(userId, token);
-    final uri = Uri.parse(url);
-    _channel = WebSocketChannel.connect(uri);
-
-    _subscription = _channel!.stream.listen(
-      (data) {
-        try {
-          final json = jsonDecode(data as String) as Map<String, dynamic>;
-          if (json.containsKey('error')) return;
-          _messageController?.add(ChatMessage.fromJson(json));
-        } catch (_) {}
-      },
-      onError: (error) {
-        _messageController?.addError(error);
-      },
-      onDone: () {
-        _messageController?.close();
-      },
-    );
-
-    return _messageController!.stream;
+  Stream<ChatMessage> get messageStream {
+    return _socketService.eventStream
+        .where((event) {
+          final type = event['type'] as String?;
+          return type == 'message' || type == 'reaction' || type == 'edit' || type == 'delete';
+        })
+        .map((event) => ChatMessage.fromJson(event));
   }
 
   void sendMessage({
@@ -191,7 +182,6 @@ class ChatRepository {
     String? attachmentName,
     String? attachmentType,
   }) {
-    if (_channel == null) return;
     final payload = {
       'type': 'message',
       'content': content,
@@ -202,7 +192,7 @@ class ChatRepository {
       if (attachmentName != null) 'attachment_name': attachmentName,
       if (attachmentType != null) 'attachment_type': attachmentType,
     };
-    _channel!.sink.add(jsonEncode(payload));
+    _socketService.sendRaw(jsonEncode(payload));
   }
 
   Future<ChatMessage> sendAttachmentMessage({
@@ -232,40 +222,31 @@ class ChatRepository {
     required String messageId,
     required String content,
   }) {
-    if (_channel == null) return;
     final payload = {
       'type': 'edit',
       'message_id': messageId,
       'content': content,
     };
-    _channel!.sink.add(jsonEncode(payload));
+    _socketService.sendRaw(jsonEncode(payload));
   }
 
   void deleteMessage(String messageId) {
-    if (_channel == null) return;
     final payload = {
       'type': 'delete',
       'message_id': messageId,
     };
-    _channel!.sink.add(jsonEncode(payload));
+    _socketService.sendRaw(jsonEncode(payload));
   }
 
   void sendReaction({
     required String messageId,
     required String reactionType,
   }) {
-    if (_channel == null) return;
     final payload = {
       'type': 'reaction',
       'message_id': messageId,
       'reaction': reactionType,
     };
-    _channel!.sink.add(jsonEncode(payload));
-  }
-
-  void disconnect() {
-    _subscription?.cancel();
-    _channel?.sink.close();
-    _messageController?.close();
+    _socketService.sendRaw(jsonEncode(payload));
   }
 }

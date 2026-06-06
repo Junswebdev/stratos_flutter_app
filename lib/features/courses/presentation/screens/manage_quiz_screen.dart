@@ -165,9 +165,12 @@ class _ManageQuizScreenState extends ConsumerState<ManageQuizScreen> {
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: Row(
                       children: [
+                        // ignore: deprecated_member_use
                         Radio<int>(
                           value: i,
+                          // ignore: deprecated_member_use
                           groupValue: correctIndex,
+                          // ignore: deprecated_member_use
                           onChanged: (val) => setDialogState(() => correctIndex = val!),
                         ),
                         Expanded(child: TextField(controller: optionControllers[i], decoration: InputDecoration(labelText: "Option ${i+1}"))),

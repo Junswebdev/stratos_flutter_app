@@ -27,11 +27,20 @@ import '../features/stats/presentation/screens/student_list_screen.dart';
 import '../features/lessons/presentation/screens/lesson_viewer_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  // Use a ValueNotifier to notify GoRouter when auth state changes
+  // without recreating the entire GoRouter instance.
+  final authStateNotifier = ValueNotifier<AsyncValue<AuthState>>(ref.read(authControllerProvider));
+  
+  // Update the notifier when the auth state changes
+  ref.listen<AsyncValue<AuthState>>(authControllerProvider, (previous, next) {
+    authStateNotifier.value = next;
+  });
 
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: authStateNotifier,
     redirect: (context, state) {
+      final authState = authStateNotifier.value;
       final isAuthenticated = authState.value?.isAuthenticated ?? false;
       final isGoingToLogin = state.matchedLocation == '/login';
       final isGoingToRegister = state.matchedLocation == '/register';

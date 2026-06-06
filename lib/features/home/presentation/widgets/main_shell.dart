@@ -17,8 +17,12 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final profileAsync = ref.watch(profileProvider);
     final user = profileAsync.value;
+    final stats = ref.watch(statsProvider).value;
+    final unreadMessages = stats?.unreadMessages ?? 0;
+
     final isWide = MediaQuery.of(context).size.width >= 960;
     final currentLocation = GoRouterState.of(context).matchedLocation;
     final navItems = _navItems(user);
@@ -27,7 +31,8 @@ class MainShell extends ConsumerWidget {
     final selectedIndex = _selectedIndex(currentLocation, navItems);
 
     return Scaffold(
-      // Mobile app bar: page title + theme toggle + avatar shortcut
+      backgroundColor: theme.scaffoldBackgroundColor,
+      // Mobile app bar
       appBar: isWide
           ? null
           : AppBar(
@@ -45,7 +50,7 @@ class MainShell extends ConsumerWidget {
               ],
             ),
 
-      // Mobile: persistent bottom navigation bar (reference design style)
+      // Mobile bottom nav
       bottomNavigationBar: isWide
           ? null
           : NavigationBar(
@@ -53,7 +58,12 @@ class MainShell extends ConsumerWidget {
               onDestinationSelected: (i) => context.goNamed(navItems[i].routeName),
               destinations: navItems
                   .map((item) => NavigationDestination(
-                        icon: Icon(item.icon),
+                        icon: item.routeName == 'messages' && unreadMessages > 0
+                            ? Badge(
+                                label: Text('$unreadMessages'),
+                                child: Icon(item.icon),
+                              )
+                            : Icon(item.icon),
                         label: item.label,
                       ))
                   .toList(),
@@ -67,12 +77,20 @@ class MainShell extends ConsumerWidget {
                 user: user,
                 navItems: navItems,
                 currentLocation: currentLocation,
+                unreadMessages: unreadMessages,
                 onNavigate: (routeName) => context.goNamed(routeName),
                 onLogout: () => ref.read(authControllerProvider.notifier).logout(),
                 onToggleTheme: () => ref.read(themeModeProvider.notifier).toggle(),
                 themeIcon: themeIcon,
               ),
-            Expanded(child: child),
+            Expanded(
+              child: Column(
+                children: [
+                  if (isWide) const _TopAppBar(),
+                  Expanded(child: child),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -84,16 +102,38 @@ class MainShell extends ConsumerWidget {
     final isAdmin = user?.role == 'admin';
 
     return [
-      _NavItem(icon: Icons.dashboard_outlined, label: 'Home', routeName: 'home', matches: const ['/']),
+      const _NavItem(icon: Icons.dashboard_outlined, label: 'Home', routeName: 'home', matches: ['/']),
       _NavItem(icon: Icons.school_outlined, label: isInstructor ? 'Academy' : 'Courses', routeName: 'courses', matches: const ['/courses']),
-      _NavItem(icon: Icons.forum_outlined, label: 'Messages', routeName: 'messages', matches: const ['/messages']),
-      _NavItem(icon: Icons.campaign_outlined, label: 'Announce', routeName: 'announcements', matches: const ['/announcements']),
+      const _NavItem(icon: Icons.forum_outlined, label: 'Messages', routeName: 'messages', matches: ['/messages']),
+      const _NavItem(icon: Icons.campaign_outlined, label: 'Announce', routeName: 'announcements', matches: ['/announcements']),
       if (isInstructor)
-        _NavItem(icon: Icons.analytics_outlined, label: 'Reports', routeName: 'reports', matches: const ['/reports']),
+        const _NavItem(icon: Icons.analytics_outlined, label: 'Reports', routeName: 'reports', matches: ['/reports']),
       if (isAdmin)
-        _NavItem(icon: Icons.admin_panel_settings_outlined, label: 'Admin', routeName: 'admin', matches: const ['/admin']),
-      _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', routeName: 'settings', matches: const ['/settings']),
+        const _NavItem(icon: Icons.admin_panel_settings_outlined, label: 'Admin', routeName: 'admin', matches: ['/admin']),
+      const _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', routeName: 'settings', matches: ['/settings']),
     ];
+  }
+}
+
+class _TopAppBar extends StatelessWidget {
+  const _TopAppBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      height: 60, // Reduced height since it's empty
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : AppColors.background,
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [],
+      ),
+    );
   }
 }
 
@@ -133,6 +173,7 @@ class _ShellRail extends ConsumerWidget {
     required this.user,
     required this.navItems,
     required this.currentLocation,
+    required this.unreadMessages,
     required this.onNavigate,
     required this.onLogout,
     required this.onToggleTheme,
@@ -142,6 +183,7 @@ class _ShellRail extends ConsumerWidget {
   final AppUser? user;
   final List<_NavItem> navItems;
   final String currentLocation;
+  final int unreadMessages;
   final ValueChanged<String> onNavigate;
   final VoidCallback onLogout;
   final VoidCallback onToggleTheme;
@@ -217,6 +259,8 @@ class _ShellRail extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final item = navItems[index];
                 final isSelected = _matchesLocation(currentLocation, item.matches);
+                final bool isMessages = item.routeName == 'messages';
+
                 return Material(
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
@@ -234,11 +278,21 @@ class _ShellRail extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            item.icon,
-                            color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
-                            size: 20,
-                          ),
+                          if (isMessages && unreadMessages > 0)
+                            Badge(
+                              label: Text('$unreadMessages'),
+                              child: Icon(
+                                item.icon,
+                                color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
+                                size: 20,
+                              ),
+                            )
+                          else
+                            Icon(
+                              item.icon,
+                              color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
+                              size: 20,
+                            ),
                           const SizedBox(width: 12),
                           Text(
                             item.label,
@@ -268,7 +322,7 @@ class _ShellRail extends ConsumerWidget {
             ),
           ),
 
-          // Profile card at bottom of rail
+          // Profile card
           Padding(
             padding: const EdgeInsets.all(16),
             child: _RailProfileCard(user: user, onLogout: onLogout),

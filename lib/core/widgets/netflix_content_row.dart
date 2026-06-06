@@ -148,8 +148,6 @@ class NetflixPosterCard extends ConsumerWidget {
     return MinimalContainer(
       borderRadius: 32,
       color: theme.colorScheme.surface,
-      showShadow: true,
-      showHighlighter: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(32),
@@ -168,13 +166,13 @@ class NetflixPosterCard extends ConsumerWidget {
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
-                      color: isDark ? Colors.white10 : accent.withOpacity(0.05),
+                      color: isDark ? Colors.white10 : accent.withValues(alpha: 0.05),
                     ),
                     child: fullImageUrl != null
                         ? Image.network(
                             fullImageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, color: accent.withOpacity(0.5)),
+                            errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, color: accent.withValues(alpha: 0.5)),
                           )
                         : Icon(
                             showPlayButton ? Icons.play_circle_outline : Icons.auto_stories_outlined,

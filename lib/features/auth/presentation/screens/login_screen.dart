@@ -16,12 +16,14 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _pageController = PageController(initialPage: 0);
   bool _obscurePassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -60,7 +62,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
@@ -77,7 +78,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             Expanded(
               flex: 4,
-              child: _buildLoginForm(theme, authState, true),
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final authState = ref.watch(authControllerProvider);
+                  return _buildLoginForm(theme, authState, true);
+                },
+              ),
             ),
           ],
         ),
@@ -89,9 +95,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: PageView(
+        controller: _pageController,
         children: [
           _buildIntroSection(theme, isMobile: true),
-          _buildLoginForm(theme, authState, false),
+          Consumer(
+            builder: (context, ref, _) {
+              final authState = ref.watch(authControllerProvider);
+              return _buildLoginForm(theme, authState, false);
+            },
+          ),
         ],
       ),
     );

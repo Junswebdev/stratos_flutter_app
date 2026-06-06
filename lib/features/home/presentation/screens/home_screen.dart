@@ -93,93 +93,34 @@ class _DashboardLayout extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 700;
-        final title = Text(
-          isInstructor ? 'Instructor Console' : 'Student Lounge',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dashboard',
           style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.w900,
             letterSpacing: -1.2,
-            color: isDark ? Colors.white : Colors.black,
+            color: isDark ? Colors.white : AppColors.textHeader,
           ),
           overflow: TextOverflow.ellipsis,
-        );
-
-        final subtitle = Text(
-          isInstructor
-              ? 'Manage your academy and track student progress'
-              : 'Welcome back, ${data.user?.displayName ?? 'Student'}! Ready to learn?',
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "Welcome back! Here's your learning overview.",
           style: theme.textTheme.bodyLarge?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
           ),
-          maxLines: compact ? 2 : 1,
-          overflow: TextOverflow.ellipsis,
-        );
-
-        final action = isInstructor
-            ? MinimalButton(
-                width: compact ? double.infinity : 180,
-                onPressed: () => context.pushNamed('create_course'),
-                color: theme.colorScheme.primary,
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_rounded, size: 20, color: Colors.black),
-                    SizedBox(width: 8),
-                    Flexible(child: FittedBox(child: Text('Create Course', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900)))),
-                  ],
-                ),
-              )
-            : MinimalButton(
-                width: compact ? double.infinity : 180,
-                color: theme.colorScheme.primary,
-                onPressed: () => context.goNamed('courses'),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.explore_outlined, size: 20, color: Colors.black),
-                    SizedBox(width: 4),
-                    Flexible(child: FittedBox(child: Text('Explore Academy', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900)))),
-                  ],
-                ),
-              );
-
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              title,
-              const SizedBox(height: 4),
-              subtitle,
-              const SizedBox(height: 16),
-              action,
-            ],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  title,
-                  const SizedBox(height: 4),
-                  subtitle,
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            action,
-          ],
-        );
-      },
+        ),
+      ],
     );
   }
 
   Widget _buildMainArea(BuildContext context, bool isInstructor) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (isInstructor) {
       final myCourses = data.courses.where((c) => c.instructorId == data.user?.id).toList();
       return Column(
@@ -215,61 +156,116 @@ class _DashboardLayout extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (data.enrollments.isNotEmpty) ...[
-          NetflixContentRow<EnrollmentSummary>(
-            title: 'Continue Learning',
-            subtitle: 'Pick up exactly where you left off',
-            items: data.enrollments,
-            cardWidth: 260,
-            height: 240,
-            itemBuilder: (context, enrollment, index) {
-              return NetflixPosterCard(
-                title: enrollment.courseTitle,
-                subtitle: 'Progress: ${enrollment.progressPercent.toStringAsFixed(0)}%',
-                imageUrl: enrollment.imageUrl,
-                gradientColors: getCardGradient(enrollment.courseTitle + enrollment.courseId),
-                showPlayButton: true,
-                bottomWidget: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: LinearProgressIndicator(
-                    value: enrollment.progressPercent / 100,
-                    backgroundColor: Colors.white10,
-                    color: AppColors.secondary,
-                    minHeight: 2,
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'My Courses',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : AppColors.textHeader,
                 ),
-                onTap: enrollment.courseId.isEmpty
+              ),
+              TextButton(
+                onPressed: () => context.goNamed('courses'),
+                child: Text('View All >', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: data.enrollments.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final enrollment = data.enrollments[index];
+                return GestureDetector(
+                  onTap: enrollment.courseId.isEmpty
                     ? null
                     : () => context.pushNamed(
                         'course_detail',
                         pathParameters: {'id': enrollment.courseId},
                       ),
-              );
-            },
+                  child: Container(
+                    width: 300,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkCard : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: const BoxDecoration(
+                                color: AppColors.pastelTeal,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.menu_book_rounded, color: Colors.white),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.pastelTeal.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'In Progress',
+                                style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Text(
+                          enrollment.courseTitle,
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        const Row(
+                          children: [
+                            Icon(Icons.access_time_rounded, size: 14, color: Colors.grey),
+                            SizedBox(width: 4),
+                            Text('0/0 lessons', style: TextStyle(fontSize: 12, color: Colors.grey)), 
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Progress', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            Text('${enrollment.progressPercent.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, color: AppColors.secondary, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: enrollment.progressPercent / 100,
+                            backgroundColor: AppColors.border,
+                            color: AppColors.secondary,
+                            minHeight: 4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 48),
         ],
-        NetflixContentRow<CourseSummary>(
-          title: 'Recommended for You',
-          subtitle: 'New courses based on your education level',
-          items: data.courses,
-          cardWidth: 200,
-          height: 260,
-          onSeeAll: () => context.goNamed('courses'),
-          itemBuilder: (context, course, index) {
-            return NetflixPosterCard(
-              title: course.title,
-              subtitle: course.instructorName,
-              imageUrl: course.imageUrl,
-              gradientColors: getCardGradient(course.title + course.id),
-              showPlayButton: !course.isEnrolled,
-              onTap: () => context.pushNamed(
-                'course_detail',
-                pathParameters: {'id': course.id},
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 48),
         _AnnouncementsSection(announcements: data.announcements),
       ],
     );
@@ -302,109 +298,84 @@ class _StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (stats == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 700 ? 2 : 1);
+        final crossAxisCount = constraints.maxWidth > 1000 ? 4 : (constraints.maxWidth > 600 ? 2 : 1);
 
         final List<_StatCard> cards = isInstructor
             ? [
                 _StatCard(
-                  label: 'Courses Created',
+                  title: 'Courses Created',
                   value: '${stats!.coursesCreated}',
-                  icon: Icons.auto_stories_rounded,
-                  color: AppColors.cardLavender,
+                  subtitle: 'Active courses',
+                  icon: Icons.auto_stories_outlined,
+                  color: AppColors.pastelTeal,
                 ),
                 _StatCard(
-                  label: 'Active Students',
+                  title: 'Active Students',
                   value: '${stats!.totalStudents}',
-                  icon: Icons.people_alt_rounded,
-                  color: AppColors.cardBlue,
+                  subtitle: 'Across all courses',
+                  icon: Icons.people_outline,
+                  color: AppColors.pastelBlue,
                 ),
                 _StatCard(
-                  label: 'Avg. Progress',
+                  title: 'Avg. Progress',
                   value: '${stats!.averageProgress.toStringAsFixed(0)}%',
-                  icon: Icons.insights_rounded,
-                  color: AppColors.cardPeach,
+                  subtitle: 'Student completion',
+                  icon: Icons.insights,
+                  color: AppColors.pastelAmber,
                 ),
                 _StatCard(
-                  label: 'Unread Msgs',
+                  title: 'Unread Msgs',
                   value: '${stats!.unreadMessages}',
-                  icon: Icons.forum_rounded,
-                  color: AppColors.cardMint,
+                  subtitle: 'Needs attention',
+                  icon: Icons.forum_outlined,
+                  color: AppColors.pastelPurple,
                 ),
               ]
             : [
                 _StatCard(
-                  label: 'Enrolled',
+                  title: 'Enrolled Courses',
                   value: '${stats!.enrolledCourses}',
-                  icon: Icons.school_rounded,
-                  color: AppColors.cardBlue,
+                  subtitle: 'Active courses',
+                  icon: Icons.menu_book_rounded,
+                  color: AppColors.pastelTeal,
                 ),
                 _StatCard(
-                  label: 'Completed',
-                  value: '${stats!.completedLessons}',
-                  icon: Icons.check_circle_rounded,
-                  color: AppColors.cardMint,
-                ),
-                _StatCard(
-                  label: 'Total Progress',
+                  title: 'Avg. Progress',
                   value: '${stats!.averageProgress.toStringAsFixed(0)}%',
-                  icon: Icons.analytics_rounded,
-                  color: AppColors.cardLavender,
+                  subtitle: 'Across all courses',
+                  icon: Icons.trending_up_rounded,
+                  color: AppColors.pastelBlue,
                 ),
                 _StatCard(
-                  label: 'Announcements',
-                  value: '${stats!.totalAnnouncements}',
-                  icon: Icons.campaign_rounded,
-                  color: AppColors.cardAmber,
+                  title: 'Hours Learned',
+                  value: '0.0', // Placeholder, implement if backend supports it
+                  subtitle: 'Total time invested',
+                  icon: Icons.access_time_rounded,
+                  color: AppColors.pastelAmber,
+                ),
+                _StatCard(
+                  title: 'Completed',
+                  value: '${stats!.completedLessons}',
+                  subtitle: 'Courses finished',
+                  icon: Icons.military_tech_outlined,
+                  color: AppColors.pastelPurple,
                 ),
               ];
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  isInstructor ? 'Academy Overview' : 'My Learning Path',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                MinimalContainer(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  borderRadius: 10,
-                  color: isDark ? theme.colorScheme.surfaceContainerHighest : AppColors.border,
-                  child: Text(
-                    '${cards.length}',
-                    style: TextStyle(
-                      fontSize: 12, 
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? theme.colorScheme.onSurface : Colors.black,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: cards.length,
-              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 320,
-                mainAxisExtent: 190, 
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 20,
-              ),
-              itemBuilder: (context, index) => cards[index],
-            ),
-          ],
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: cards.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 1.8, 
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemBuilder: (context, index) => cards[index],
         );
       },
     );
@@ -413,14 +384,16 @@ class _StatsGrid extends StatelessWidget {
 
 class _StatCard extends StatelessWidget {
   const _StatCard({
-    required this.label,
+    required this.title,
     required this.value,
+    required this.subtitle,
     required this.icon,
     required this.color,
   });
 
-  final String label;
+  final String title;
   final String value;
+  final String subtitle;
   final IconData icon;
   final Color color;
 
@@ -429,47 +402,50 @@ class _StatCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return MinimalContainer(
-      padding: const EdgeInsets.all(24),
-      borderRadius: 32,
-      color: isDark ? theme.colorScheme.surfaceContainerHighest : color,
-      showBorder: isDark, 
-      showHighlighter: true,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHeader,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Icon(icon, color: isDark ? theme.colorScheme.primary : Colors.black87, size: 20),
               ),
-              Icon(Icons.more_horiz, color: isDark ? Colors.white24 : Colors.black26, size: 20),
+              Icon(icon, color: AppColors.textHeader.withValues(alpha: 0.6), size: 24),
             ],
           ),
-          const Spacer(),
           Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: isDark ? theme.colorScheme.onSurfaceVariant : Colors.black54,
+            value,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: AppColors.textHeader,
+              fontSize: 36,
             ),
           ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: isDark ? theme.colorScheme.onSurface : Colors.black,
-              ),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.textHeader.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

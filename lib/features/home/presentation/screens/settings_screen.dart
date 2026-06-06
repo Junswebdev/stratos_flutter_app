@@ -78,8 +78,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _savingProfile = true);
     final authNotifier = ref.read(authControllerProvider.notifier);
-    final dashboardInvoker = ref.invalidate;
-    
+
     final success = await authNotifier.updateProfile(
       fullName: name,
       email: email,
@@ -88,8 +87,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _savingProfile = false);
 
     if (success) {
-      dashboardInvoker(profileProvider);
-      dashboardInvoker(dashboardProvider);
+      ref.invalidate(profileProvider);
+      ref.invalidate(dashboardProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated')),
@@ -99,9 +98,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to update profile')),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update profile')),
+      );
+    }
   }
 
   Future<void> _pickAvatar(AppUser? user) async {
@@ -123,7 +124,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (user == null) return;
     setState(() => _savingAvatar = true);
     final authNotifier = ref.read(authControllerProvider.notifier);
-    final dashboardInvoker = ref.invalidate;
 
     final success = await authNotifier.updateAvatar(
       imageBytes: file.bytes!,
@@ -133,8 +133,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _savingAvatar = false);
 
     if (success) {
-      dashboardInvoker(profileProvider);
-      dashboardInvoker(dashboardProvider);
+      ref.invalidate(profileProvider);
+      ref.invalidate(dashboardProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Avatar updated')),
@@ -147,9 +147,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to update avatar')),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update avatar')),
+      );
+    }
   }
 
   Future<void> _showChangePasswordDialog() async {
@@ -211,20 +213,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final newPassword = newPasswordController.text.trim();
       final confirmPassword = confirmPasswordController.text.trim();
       if (newPassword.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter a new password')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Enter a new password')),
+          );
+        }
         return;
       }
       if (newPassword != confirmPassword) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords do not match')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Passwords do not match')),
+          );
+        }
         return;
       }
 
       final authNotifier = ref.read(authControllerProvider.notifier);
-      final dashboardInvoker = ref.invalidate;
       final success = await authNotifier.updateProfile(
         password: newPassword,
       );
@@ -239,7 +244,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
       if (success) {
-        dashboardInvoker(profileProvider);
+        ref.invalidate(profileProvider);
       }
     } finally {
       newPasswordController.dispose();
