@@ -18,7 +18,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _pageController = PageController(initialPage: 0);
+  final _pageController = PageController(initialPage: 1);
   bool _obscurePassword = true;
   UserRole _selectedRole = UserRole.student;
 

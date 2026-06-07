@@ -16,7 +16,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _pageController = PageController(initialPage: 0);
+  final _pageController = PageController(initialPage: 1);
   bool _obscurePassword = true;
 
   @override
