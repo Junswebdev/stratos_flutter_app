@@ -128,35 +128,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildIntroSection(ThemeData theme, {bool isMobile = false}) {
+    final isDark = theme.brightness == Brightness.dark;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(
-          'assets/images/background.jpg',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              child: const Center(
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  size: 48,
-                  color: AppColors.primary,
-                ),
-              ),
-            );
-          },
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.3),
-                Colors.black.withValues(alpha: 0.7),
-              ],
-            ),
+        Container(color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFF111111)),
+        Opacity(
+          opacity: 0.4,
+          child: Image.asset(
+            'assets/images/background.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
           ),
         ),
         Padding(
@@ -165,47 +147,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.auto_stories,
-                size: isMobile ? 64 : 80,
-                color: Colors.white,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.school_rounded, color: Colors.black, size: 28),
               ),
               const SizedBox(height: 32),
               Text(
-                'Stratos',
+                'Class IQ',
                 textAlign: isMobile ? TextAlign.center : TextAlign.start,
                 style: (isMobile ? theme.textTheme.displaySmall : theme.textTheme.displayMedium)
                     ?.copyWith(
                   color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.0,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.5,
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Empowering education through seamless\ndigital experiences. Manage courses, track\nprogress, and collaborate with ease.',
+                'The minimalist learning management system for high-performing teams and academic institutions.',
                 textAlign: isMobile ? TextAlign.center : TextAlign.start,
-                style: (isMobile ? theme.textTheme.titleMedium : theme.textTheme.headlineSmall)
-                    ?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontWeight: FontWeight.w300,
-                  height: 1.5,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w400,
+                  height: 1.6,
+                  fontSize: 16,
                 ),
               ),
-              if (isMobile) ...[
-                const SizedBox(height: 64),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Swipe to sign in',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward, color: Colors.white70, size: 16),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -218,135 +190,120 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 450),
+          constraints: const BoxConstraints(maxWidth: 400),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Welcome back text
               Text(
-                'Welcome Back',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
+                'Welcome back',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
-                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Sign in to continue your journey',
-                style: theme.textTheme.bodyLarge?.copyWith(
+                'Enter your credentials to access your account',
+                style: TextStyle(
                   color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 40),
 
               // Email field
               MinimalTextField(
                 controller: _emailController,
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined, size: 20, color: theme.colorScheme.primary),
+                labelText: 'Email address',
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Password field
               MinimalTextField(
                 controller: _passwordController,
                 labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outlined, size: 20, color: theme.colorScheme.primary),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 18,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _login(),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
 
               // Login button
               MinimalButton(
                 onPressed: authState.isLoading ? null : _login,
-                color: theme.colorScheme.primary,
+                color: AppColors.primary,
                 child: authState.isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          color: Colors.black,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                       )
                     : const Text(
-                        'SIGN IN',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                        ),
+                        'Continue',
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
                       ),
               ),
               const SizedBox(height: 32),
 
-              // Divider
               Row(
                 children: [
-                  Expanded(child: Divider(color: theme.colorScheme.outline)),
+                  Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'OR',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: theme.colorScheme.outline)),
+                  Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
                 ],
               ),
               const SizedBox(height: 32),
 
               // Social Logins
               _SocialButton(
-                icon: Icons.g_mobiledata,
+                icon: Icons.g_mobiledata_rounded,
                 label: 'Sign in with Google',
-                color: isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade100,
-                textColor: isDark ? Colors.white : Colors.black,
-                onPressed: () =>
-                    ref.read(authControllerProvider.notifier).loginWithGoogle(),
+                color: isDark ? AppColors.darkSurface : Colors.white,
+                textColor: theme.colorScheme.onSurface,
+                onPressed: () => ref.read(authControllerProvider.notifier).loginWithGoogle(),
               ),
               const SizedBox(height: 32),
-              // Register link
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Don't have an account? ",
-                    style: theme.textTheme.bodyMedium,
+                    "New to Class IQ? ",
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                   ),
-                  TextButton(
-                    onPressed: () => context.pushNamed('register'),
-                    child: Text(
-                      'Sign Up',
+                  GestureDetector(
+                    onTap: () => context.pushNamed('register'),
+                    child: const Text(
+                      'Create account',
                       style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        fontSize: 13,
                       ),
                     ),
                   ),

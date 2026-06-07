@@ -31,13 +31,9 @@ class CourseDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(courseData?.title ?? 'Course'),
         actions: [
-          IconButton(
-            icon: Icon(_themeIcon(ref.watch(themeModeProvider))),
-            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
-          ),
           if (courseData?.isEnrolled == true && !isInstructor)
             IconButton(
-              icon: const Icon(Icons.psychology_outlined, color: AppColors.primary),
+              icon: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
               onPressed: () => context.pushNamed(
                 'course_ai',
                 pathParameters: {'id': courseId},
@@ -62,18 +58,18 @@ class CourseDetailScreen extends ConsumerWidget {
             : RefreshIndicator(
                 onRefresh: () async => ref.invalidate(courseDetailProvider(courseId)),
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
                   children: [
-                    _buildCourseHeader(context, courseData, isInstructor, ref),
-                    const SizedBox(height: 24),
+                    _buildCourseHeader(context, courseData, isInstructor),
+                    const SizedBox(height: 32),
                     _buildMetaSection(context, courseData),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     if (courseData.announcementsCount > 0) ...[
                       _buildCourseAnnouncements(context, courseId),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                     ],
                     _buildDescriptionSection(context, courseData),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 40),
                     if (courseData.enrollmentStatus == 'approved' || isInstructor)
                        _ModulesSection(course: courseData, isInstructor: isInstructor)
                     else
@@ -87,21 +83,33 @@ class CourseDetailScreen extends ConsumerWidget {
 
   Widget _buildCurriculumLocked(BuildContext context) {
     final theme = Theme.of(context);
-    return MinimalContainer(
-      padding: const EdgeInsets.all(32),
-      borderRadius: 24,
-      color: theme.colorScheme.surfaceContainerHighest,
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+      ),
       child: Column(
         children: [
-          Icon(Icons.lock_outline_rounded, size: 48, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.lock_outline_rounded, size: 32, color: AppColors.primary),
+          ),
+          const SizedBox(height: 24),
           const Text(
             'Curriculum Locked',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            'The course content is private. Please enroll and get approved by your instructor to access the full curriculum.',
+            'Enroll and get approved by your instructor to access the course content.',
             textAlign: TextAlign.center,
             style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
           ),
@@ -110,170 +118,147 @@ class CourseDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCourseHeader(BuildContext context, CourseDetailData course, bool isInstructor, WidgetRef ref) {
+  Widget _buildCourseHeader(BuildContext context, CourseDetailData course, bool isInstructor) {
     final theme = Theme.of(context);
-    final accent = getGradientColor(course.title + course.id);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return MinimalContainer(
-      padding: EdgeInsets.zero,
-      borderRadius: 24,
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (course.imageUrl != null && course.imageUrl!.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              child: SizedBox(
-                height: 180,
-                width: double.infinity,
-                child: Image.network(
-                  course.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: accent.withValues(alpha: 0.08),
-                    child: Icon(Icons.auto_stories_rounded, color: accent, size: 48),
-                  ),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (course.imageUrl != null && course.imageUrl!.isNotEmpty)
+          Container(
+            height: 240,
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+              image: DecorationImage(
+                image: Image.network(course.imageUrl!).image,
+                fit: BoxFit.cover,
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _DetailChip(label: course.level.toUpperCase(), color: accent),
-                    if (!isInstructor && course.enrollmentStatus != null && course.enrollmentStatus!.isNotEmpty) ...[
-                      if (course.enrollmentStatus == 'approved')
-                        const _DetailChip(label: 'ENROLLED', color: AppColors.success)
-                      else if (course.enrollmentStatus == 'pending')
-                        const _DetailChip(label: 'PENDING APPROVAL', color: AppColors.orange),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(course.title, style: theme.textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor: accent.withValues(alpha: 0.1),
-                      child: Text(
-                        course.instructorName[0].toUpperCase(),
-                        style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        course.instructorName,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                if (!isInstructor && (course.enrollmentStatus == null || course.enrollmentStatus!.isEmpty))
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () async {
-                        final container = ProviderScope.containerOf(context);
-                        try {
-                           await container.read(homeRepositoryProvider).joinCourse(course.id);
-                           container.invalidate(courseDetailProvider(course.id));
-                           container.invalidate(dashboardProvider);
-                           if (context.mounted) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('Enrollment request sent! Please ask your teacher for the join code.')),
-                             );
-                           }
-                        } catch (e) {
-                           if (context.mounted) {
-                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                           }
-                        }
-                      },
-                      icon: const Icon(Icons.send_rounded),
-                      label: const Text('Request to Enroll'),
-                    ),
-                  )
-                else if (!isInstructor && course.enrollmentStatus == 'pending')
-                  _JoinCodeInput(courseId: course.id)
-                else if (course.progressPercent > 0 || course.enrollmentStatus == 'approved' || isInstructor)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!isInstructor) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Course Progress',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            Text(
-                              '${course.progressPercent.toStringAsFixed(0)}%',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: course.progressPercent / 100,
-                            minHeight: 8,
-                            backgroundColor: theme.colorScheme.surfaceContainer,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: accent),
-                            foregroundColor: accent,
-                          ),
-                          onPressed: () => context.pushNamed(
-                            'course_chat',
-                            pathParameters: {'courseId': course.id},
-                            extra: course.title,
-                          ),
-                          icon: const Icon(Icons.chat_bubble_outline_rounded),
-                          label: const Text('Course Chat', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
           ),
-        ],
-      ),
+        
+        Row(
+          children: [
+            _DetailChip(label: course.level.toUpperCase(), color: AppColors.textHeader, isDark: true),
+            const SizedBox(width: 8),
+            if (!isInstructor && course.enrollmentStatus != null && course.enrollmentStatus!.isNotEmpty) ...[
+              if (course.enrollmentStatus == 'approved')
+                const _DetailChip(label: 'ENROLLED', color: AppColors.success)
+              else if (course.enrollmentStatus == 'pending')
+                const _DetailChip(label: 'PENDING', color: AppColors.warning),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(course.title, style: theme.textTheme.headlineLarge),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            SafeAvatar(
+              imageUrl: null, // Replace with instructor avatar if available
+              radius: 12,
+              fallbackText: course.instructorName[0].toUpperCase(),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              course.instructorName,
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        if (!isInstructor && (course.enrollmentStatus == null || course.enrollmentStatus!.isEmpty))
+          MinimalButton(
+            onPressed: () async {
+              final container = ProviderScope.containerOf(context);
+              try {
+                  await container.read(homeRepositoryProvider).joinCourse(course.id);
+                  container.invalidate(courseDetailProvider(course.id));
+                  container.invalidate(dashboardProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Enrollment request sent!')),
+                    );
+                  }
+              } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+              }
+            },
+            child: const Text('Enroll Now'),
+          )
+        else if (!isInstructor && course.enrollmentStatus == 'pending')
+          _JoinCodeInput(courseId: course.id)
+        else if (course.enrollmentStatus == 'approved' || isInstructor)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!isInstructor) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Course Progress', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      '${course.progressPercent.toStringAsFixed(0)}%',
+                      style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: course.progressPercent / 100,
+                    minHeight: 6,
+                    backgroundColor: isDark ? Colors.white10 : AppColors.border,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: MinimalButton(
+                      onPressed: () => context.pushNamed(
+                        'course_chat',
+                        pathParameters: {'courseId': course.id},
+                        extra: course.title,
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                          SizedBox(width: 10),
+                          Text('Course Discussions'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+      ],
     );
   }
 
   Widget _buildMetaSection(BuildContext context, CourseDetailData course) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        _MetaBox(label: 'Modules', value: '${course.modulesCount}', icon: Icons.view_module_rounded),
-        _MetaBox(label: 'Lessons', value: '${course.lessonsCount}', icon: Icons.play_lesson_rounded),
-        _MetaBox(label: 'Updates', value: '${course.announcementsCount}', icon: Icons.campaign_rounded),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _MetaBox(label: 'Modules', value: '${course.modulesCount}', icon: Icons.view_module_outlined),
+          const SizedBox(width: 12),
+          _MetaBox(label: 'Lessons', value: '${course.lessonsCount}', icon: Icons.play_lesson_outlined),
+          const SizedBox(width: 12),
+          _MetaBox(label: 'Updates', value: '${course.announcementsCount}', icon: Icons.campaign_outlined),
+        ],
+      ),
     );
   }
 
@@ -282,11 +267,11 @@ class CourseDetailScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('About this course', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        Text('About Course', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         Text(
           course.description.isNotEmpty ? course.description : 'No description provided.',
-          style: theme.textTheme.bodyLarge,
+          style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -304,18 +289,31 @@ class CourseDetailScreen extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader(title: 'Course Updates', subtitle: 'News from your instructor'),
-                const SizedBox(height: 12),
+                Text('Recent Updates', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
                 ...courseAnnouncements.take(2).map(
-                      (a) => MinimalContainer(
-                        margin: const EdgeInsets.only(bottom: 8),
+                      (a) => Container(
+                        margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
-                        borderRadius: 20,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.campaign_rounded, color: AppColors.primary),
-                          title: Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(a.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkCard : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkBorder : AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(a.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                                  Text(a.body, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -351,43 +349,49 @@ class _JoinCodeInputState extends ConsumerState<_JoinCodeInput> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return MinimalContainer(
-      padding: const EdgeInsets.all(20),
-      borderRadius: 20,
-      color: theme.colorScheme.primary.withValues(alpha: 0.05),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.02) : AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Finalize Enrollment', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
+          const Text('Verification Required', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          const SizedBox(height: 6),
           Text(
-            'Your request is pending. Enter the 6-digit code provided by your instructor to join.',
-            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+            'Enter the code from your instructor to unlock this course.',
+            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _controller,
                   enabled: !_isSubmitting,
-                  autofocus: true,
                   textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter Code',
+                  decoration: InputDecoration(
+                    hintText: 'Code',
                     filled: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
-                  onSubmitted: (_) => _submit(),
                 ),
               ),
               const SizedBox(width: 12),
-              FilledButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Join'),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                      : const Text('Unlock'),
+                ),
               ),
             ],
           ),
@@ -404,24 +408,14 @@ class _JoinCodeInputState extends ConsumerState<_JoinCodeInput> {
     final container = ProviderScope.containerOf(context);
     try {
       await container.read(homeRepositoryProvider).joinCourseByCode(code);
-      
       if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Welcome to the course!')),
-      );
-      
-      // We set to false just in case the parent doesn't rebuild immediately
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Course unlocked!')));
       setState(() => _isSubmitting = false);
-      
-      // Invalidate to trigger a rebuild of the parent
       container.invalidate(courseDetailProvider(widget.courseId));
       container.invalidate(dashboardProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invalid code: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid code: $e')));
       setState(() => _isSubmitting = false);
     }
   }
@@ -437,50 +431,48 @@ class _MetaBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return SizedBox(
-      width: 140,
-      child: MinimalContainer(
-        padding: const EdgeInsets.all(16),
-        borderRadius: 18,
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Column(
-          children: [
-            Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+    return Container(
+      width: 110,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _DetailChip extends StatelessWidget {
-  const _DetailChip({required this.label, required this.color});
-
+  const _DetailChip({required this.label, required this.color, this.isDark = false});
   final String label;
   final Color color;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark ? AppColors.textHeader : color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+        style: TextStyle(color: isDark ? Colors.white : color, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5),
       ),
     );
   }
@@ -495,76 +487,72 @@ class _ModulesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Curriculum', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 16),
+        Text('Curriculum', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 20),
         if (course.modules.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
               child: Text(
-                isInstructor ? 'Add modules to start building the curriculum.' : 'No content available yet.',
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                textAlign: TextAlign.center,
+                'No content available yet.',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
           )
         else
           ...course.modules.map(
-            (module) => MinimalContainer(
-              margin: const EdgeInsets.only(bottom: 12),
-              borderRadius: 20,
-              child: ExpansionTile(
-                shape: const RoundedRectangleBorder(side: BorderSide.none),
-                title: Text(module.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('${module.lessons.length} Lessons', style: const TextStyle(fontSize: 12)),
-                children: module.lessons
-                    .map(
+            (module) => Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkCard : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+              ),
+              child: Theme(
+                data: theme.copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  title: Text(module.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  subtitle: Text('${module.lessons.length} sections', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                  children: [
+                    const Divider(height: 1),
+                    ...module.lessons.map(
                       (lesson) => ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                         leading: Icon(
-                          lesson.isCompleted
-                              ? Icons.check_circle_rounded
-                              : Icons.play_circle_filled_rounded,
-                          color: lesson.isCompleted ? AppColors.success : theme.colorScheme.onSurfaceVariant,
+                          lesson.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          color: lesson.isCompleted ? AppColors.success : AppColors.primary,
+                          size: 20,
                         ),
                         title: Text(
                           lesson.title,
-                          style: TextStyle(fontWeight: lesson.isCompleted ? FontWeight.normal : FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 14, 
+                            fontWeight: lesson.isCompleted ? FontWeight.w400 : FontWeight.w600,
+                            color: lesson.isCompleted ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onSurface,
+                          ),
                         ),
-                        trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                        trailing: const Icon(Icons.chevron_right_rounded, size: 18),
                         onTap: () {
                           if (lesson.contentType == 'quiz') {
-                            context.pushNamed(
-                              'quiz_taking',
-                              pathParameters: {'lessonId': lesson.id},
-                              extra: lesson.title,
-                            );
+                            context.pushNamed('quiz_taking', pathParameters: {'lessonId': lesson.id}, extra: lesson.title);
                           } else {
-                            context.pushNamed(
-                              'lesson_viewer',
-                              pathParameters: {'courseId': course.id, 'lessonId': lesson.id},
-                              extra: lesson.title,
-                            );
+                            context.pushNamed('lesson_viewer', pathParameters: {'courseId': course.id, 'lessonId': lesson.id}, extra: lesson.title);
                           }
                         },
                       ),
-                    )
-                    .toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
       ],
     );
   }
-}
-
-IconData _themeIcon(ThemeMode mode) {
-  return switch (mode) {
-    ThemeMode.system => Icons.brightness_auto,
-    ThemeMode.dark => Icons.dark_mode,
-    ThemeMode.light => Icons.light_mode,
-  };
 }

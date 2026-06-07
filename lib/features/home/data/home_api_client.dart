@@ -8,7 +8,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../data/dio_client.dart';
 
 String get _defaultApiBaseUrl {
-  return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
+  const envUrl = String.fromEnvironment('API_BASE_URL');
+  if (envUrl.isNotEmpty) return envUrl;
+
+  if (kDebugMode) {
+    return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
+  } else {
+    return 'https://stratos-fastapi-backend.onrender.com/api/v1/';
+  }
 }
 
 const List<String> _tokenKeys = <String>[

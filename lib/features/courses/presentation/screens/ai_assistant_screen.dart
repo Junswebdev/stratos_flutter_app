@@ -30,7 +30,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
   void initState() {
     super.initState();
     _messages.add(_ChatMessage(
-      text: "Hi! I'm your Stratos AI assistant for **${widget.courseTitle}**. Ask me anything about the course material!",
+      text: "Hi! I'm your Class IQ AI assistant for **${widget.courseTitle}**. Ask me anything about the course material!",
       isAi: true,
       isStreaming: false,
     ));
@@ -109,7 +109,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
       _messages
         ..clear()
         ..add(_ChatMessage(
-          text: "Hi! I'm your Stratos AI assistant for **${widget.courseTitle}**. Ask me anything about the course material!",
+          text: "Hi! I'm your Class IQ AI assistant for **${widget.courseTitle}**. Ask me anything about the course material!",
           isAi: true,
           isStreaming: false,
         ));
@@ -120,25 +120,25 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final profile = ref.watch(profileProvider).asData?.value;
-    final isInstructor = profile?.role == 'instructor' || profile?.role == 'admin';
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    const accentColor = AppColors.primary;
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(isInstructor ? "AI Teaching Assistant" : "AI Study Buddy", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-            Text(widget.courseTitle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black54)),
+            const Text("AI Learning Companion", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            Text(widget.courseTitle, style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black45, fontWeight: FontWeight.w600)),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'Clear chat',
+            tooltip: 'Reset Session',
             onPressed: _clearChat,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.auto_awesome_motion_rounded, size: 20),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -146,62 +146,104 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                return _ChatBubble(message: msg, accentColor: accentColor);
+                return _ChatBubble(message: msg);
               },
             ),
           ),
           if (_isLoading)
-            _ThinkingIndicator(accentColor: accentColor),
-          if (_messages.length <= 1)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _suggestions
-                    .map(
-                      (text) => ActionChip(
-                        label: Text(text),
-                        onPressed: () {
-                          _controller.text = text;
-                          _sendMessage();
-                        },
-                      ),
-                    )
-                    .toList(),
-              ),
+            const Padding(
+              padding: EdgeInsets.only(left: 24, bottom: 24),
+              child: _ThinkingIndicator(),
             ),
+          
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 24),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : Colors.white,
-              border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
+              color: isDark ? AppColors.darkBackground : AppColors.background,
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onSubmitted: (_) => _sendMessage(),
-                    decoration: InputDecoration(
-                      hintText: "Ask about the course...",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      filled: true,
-                      fillColor: isDark ? Colors.black12 : Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                if (_messages.length <= 1)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _suggestions
+                            .map(
+                              (text) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ActionChip(
+                                  label: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+                                  side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  onPressed: () {
+                                    _controller.text = text;
+                                    _sendMessage();
+                                  },
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: accentColor,
-                  child: IconButton(
-                    onPressed: _sendMessage,
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurface : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.attach_file_rounded, size: 20),
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          onSubmitted: (_) => _sendMessage(),
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: "How can I help with this course?",
+                            hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _sendMessage,
+                          icon: const Icon(Icons.arrow_upward_rounded, color: AppColors.primary, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -221,63 +263,137 @@ class _ChatMessage {
 }
 
 class _ChatBubble extends StatelessWidget {
-  const _ChatBubble({required this.message, required this.accentColor});
+  const _ChatBubble({required this.message});
   final _ChatMessage message;
-  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Align(
-      alignment: message.isAi ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
-        decoration: BoxDecoration(
-          color: message.isAi 
-              ? (isDark ? AppColors.darkCard : Colors.grey[200]) 
-              : accentColor,
-          borderRadius: BorderRadius.circular(20).copyWith(
-            bottomLeft: message.isAi ? Radius.zero : null,
-            bottomRight: message.isAi ? null : Radius.zero,
-          ),
-          boxShadow: [
-            if (!message.isAi)
-              BoxShadow(
-                color: accentColor.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-          ],
-        ),
-        child: message.isAi 
-          ? MarkdownBody(
-              data: message.text,
-              selectable: true,
-              styleSheet: MarkdownStyleSheet(
-                p: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontSize: 14,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isAi = message.isAi;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: isAi ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+        children: [
+          Row(
+            mainAxisAlignment: isAi ? MainAxisAlignment.start : MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isAi) ...[
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: isAi ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      isAi ? "CLASS IQ AI" : "YOU",
+                      style: TextStyle(
+                        fontSize: 9, 
+                        fontWeight: FontWeight.w900, 
+                        letterSpacing: 1.2,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isAi 
+                          ? (isDark ? AppColors.darkSurface : Colors.white)
+                          : AppColors.primary,
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: Radius.circular(isAi ? 4 : 16),
+                          bottomRight: Radius.circular(isAi ? 16 : 4),
+                        ),
+                        border: isAi ? Border.all(color: isDark ? AppColors.darkBorder : AppColors.border) : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: isAi 
+                        ? MarkdownBody(
+                            data: message.text,
+                            selectable: true,
+                            styleSheet: MarkdownStyleSheet(
+                              p: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                                fontSize: 14,
+                                height: 1.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              code: TextStyle(
+                                backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                              codeblockDecoration: BoxDecoration(
+                                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            message.text,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                    ),
+                  ],
                 ),
               ),
-            )
-          : Text(
-              message.text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+              if (!isAi) ...[
+                const SizedBox(width: 12),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline_rounded,
+                    size: 16,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
 class _ThinkingIndicator extends StatefulWidget {
-  const _ThinkingIndicator({required this.accentColor});
-  final Color accentColor;
+  const _ThinkingIndicator();
 
   @override
   State<_ThinkingIndicator> createState() => _ThinkingIndicatorState();
@@ -291,7 +407,7 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator> with SingleTicke
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
     )..repeat();
   }
 
@@ -303,45 +419,33 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator> with SingleTicke
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(left: 16, bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : Colors.grey[200],
-          borderRadius: BorderRadius.circular(20).copyWith(bottomLeft: Radius.zero),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (index) {
-            return AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                final delay = index * 0.2;
-                final value = ( (_controller.value + delay) % 1.0 );
-                final verticalOffset = -5 * (1.0 - (value - 0.5).abs() * 2);
-                
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Transform.translate(
-                    offset: Offset(0, verticalOffset),
-                    child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: widget.accentColor.withValues(alpha: 0.6),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (index) {
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final delay = index * 0.2;
+            final value = ( (_controller.value + delay) % 1.0 );
+            final verticalOffset = -4 * (1.0 - (value - 0.5).abs() * 2);
+            
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Transform.translate(
+                offset: Offset(0, verticalOffset),
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
                   ),
-                );
-              },
+                ),
+              ),
             );
-          }),
-        ),
-      ),
+          },
+        );
+      }),
     );
   }
 }

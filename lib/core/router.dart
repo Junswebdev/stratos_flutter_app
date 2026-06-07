@@ -238,7 +238,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Stratos LMS')),
+      appBar: AppBar(title: const Text('Class IQ')),
       body: Center(
         child: Text(state.error?.toString() ?? 'Page not found'),
       ),

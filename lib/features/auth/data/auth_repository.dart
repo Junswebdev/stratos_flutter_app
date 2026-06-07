@@ -49,6 +49,21 @@ class AuthRepository {
     }
   }
 
+  Future<AuthSessionModel> loginWithGoogle(String idToken) async {
+    try {
+      final response = await dio.post<dynamic>(
+        'auth/login/google',
+        data: <String, dynamic>{'id_token': idToken},
+      );
+      final session = AuthSessionModel.fromJson(response.data);
+      _cachedUserId = session.user?.id;
+      await _persistSession(session);
+      return session;
+    } on DioException catch (e) {
+      throw Exception(_extractApiErrorMessage(e.response?.data, fallbackMessage: 'Google login failed'));
+    }
+  }
+
   Future<UserModel> register({
     required String email,
     required String password,

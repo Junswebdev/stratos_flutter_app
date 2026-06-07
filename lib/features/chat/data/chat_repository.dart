@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/dio_client.dart';
 import '../../../data/json_parsing.dart';
 import '../../../core/socket_service.dart';
+import '../../../core/utils/url_utils.dart';
 
 import 'package:stratos_app/features/auth/presentation/controllers/auth_controller.dart';
 
@@ -66,7 +67,7 @@ class ChatMessage {
       id: readString(json, const ['id', 'message_id']) ?? '',
       senderId: readString(json, const ['sender_id', 'senderId']) ?? '',
       senderName: readString(json, const ['sender_name', 'senderName']),
-      senderAvatarUrl: readString(json, const ['sender_avatar_url', 'senderAvatarUrl']),
+      senderAvatarUrl: formatFullUrl(readString(json, const ['sender_avatar_url', 'senderAvatarUrl'])),
       content: readString(json, const ['content', 'message', 'text']) ?? '',
       timestamp: readDateTime(json, const ['timestamp', 'created_at', 'sent_at']) ?? DateTime.now(),
       courseId: readString(json, const ['course_id', 'courseId']),
@@ -75,7 +76,7 @@ class ChatMessage {
       replyTo: json['reply_to'] != null ? ChatMessageReply.fromJson(asJsonMap(json['reply_to'])) : null,
       isEdited: readDateTime(json, const ['is_edited', 'editedAt']),
       isDeleted: readDateTime(json, const ['is_deleted', 'deletedAt']),
-      attachmentUrl: readString(json, const ['attachment_url', 'attachmentUrl']),
+      attachmentUrl: formatFullUrl(readString(json, const ['attachment_url', 'attachmentUrl'])),
       attachmentName: readString(json, const ['attachment_name', 'attachmentName']),
       attachmentType: readString(json, const ['attachment_type', 'attachmentType']),
       likes: likesList.map((e) => e.toString()).toList(),
@@ -104,7 +105,7 @@ class ChatMessageReply {
       id: readString(json, const ['id', 'message_id']) ?? '',
       senderId: readString(json, const ['sender_id', 'senderId']) ?? '',
       senderName: readString(json, const ['sender_name', 'senderName']),
-      senderAvatarUrl: readString(json, const ['sender_avatar_url', 'senderAvatarUrl']),
+      senderAvatarUrl: formatFullUrl(readString(json, const ['sender_avatar_url', 'senderAvatarUrl'])),
       content: readString(json, const ['content', 'message', 'text']) ?? '',
     );
   }
@@ -171,6 +172,10 @@ class ChatRepository {
           return type == 'message' || type == 'reaction' || type == 'edit' || type == 'delete';
         })
         .map((event) => ChatMessage.fromJson(event));
+  }
+
+  void disconnect() {
+    _socketService.disconnect();
   }
 
   void sendMessage({

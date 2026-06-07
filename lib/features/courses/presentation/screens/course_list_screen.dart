@@ -7,6 +7,7 @@ import '../../../../core/widgets/minimalist_widgets.dart';
 import '../../../home/application/home_providers.dart';
 import '../../../home/data/home_models.dart';
 import '../../../home/presentation/widgets/async_state_view.dart';
+import '../../../../core/utils/url_utils.dart';
 
 class CourseListScreen extends ConsumerWidget {
   const CourseListScreen({super.key});
@@ -20,7 +21,7 @@ class CourseListScreen extends ConsumerWidget {
     final userData = profileAsync.asData?.value;
     final isInstructor = userData?.role == 'instructor' || userData?.role == 'admin';
     final theme = Theme.of(context);
-    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
+    const accentColor = AppColors.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -39,6 +40,8 @@ class CourseListScreen extends ConsumerWidget {
               onPressed: () => context.pushNamed('create_course'),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Create New Course'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
             )
           : null,
       body: Column(
@@ -53,50 +56,47 @@ class CourseListScreen extends ConsumerWidget {
               loadingLabel: 'Loading academy data...',
               child: RefreshIndicator(
                 onRefresh: () async => ref.invalidate(browseCoursesProvider),
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                  children: [
-                    if (coursesAsync.value == null || coursesAsync.value!.isEmpty)
-                      _buildEmptyState(
-                        context,
-                        ref,
-                        isInstructor,
-                        searchQuery.isNotEmpty || selectedCategory != null,
-                      )
-                    else
-                      ...coursesAsync.value!.map((course) {
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    final crossAxisCount = width > 1200 ? 4 : (width > 900 ? 3 : (width > 600 ? 2 : 1));
+
+                    if (coursesAsync.value == null || coursesAsync.value!.isEmpty) {
+                       return SingleChildScrollView(
+                         physics: const AlwaysScrollableScrollPhysics(),
+                         child: _buildEmptyState(
+                          context,
+                          ref,
+                          isInstructor,
+                          searchQuery.isNotEmpty || selectedCategory != null,
+                        ),
+                       );
+                    }
+
+                    return GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 20,
+                        mainAxisSpacing: 20,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemCount: coursesAsync.value!.length,
+                      itemBuilder: (context, index) {
+                        final course = coursesAsync.value![index];
                         final isOwner = userData?.role == 'admin' ||
                             (userData?.role == 'instructor' && course.instructorId == userData?.id);
                         final showJoin = (course.enrollmentStatus == null || course.enrollmentStatus!.isEmpty) && !isOwner && userData?.role == 'student';
 
-                        return _CourseCard(
+                        return _ModernCourseCard(
                           course: course,
                           isOwner: isOwner,
                           showJoin: showJoin,
-                          accentColor: accentColor,
                           onTap: () => context.pushNamed('course_detail', pathParameters: {'id': course.id}),
-                          onJoin: () async {
-                            final container = ProviderScope.containerOf(context);
-                            try {
-                              await container.read(homeRepositoryProvider).joinCourse(course.id);
-                              container.invalidate(browseCoursesProvider);
-                              container.invalidate(dashboardProvider);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Enrollment request sent!')),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
-                              }
-                            }
-                          },
                         );
-                      }),
-                  ],
+                      },
+                    );
+                  },
                 ),
               ),
             ),
@@ -114,57 +114,76 @@ class CourseListScreen extends ConsumerWidget {
     Color accentColor,
   ) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return MinimalContainer(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.all(16),
-      borderRadius: 24,
-      color: theme.colorScheme.surfaceContainerHighest,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : AppColors.background,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          MinimalTextField(
-            labelText: 'Search courses or descriptions...',
-            prefixIcon: const Icon(Icons.search_rounded),
-            onSubmitted: (val) => ref.read(courseSearchQueryProvider.notifier).update(val),
-            suffixIcon: query.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 20),
-                    onPressed: () => ref.read(courseSearchQueryProvider.notifier).update(''),
-                  )
-                : null,
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+            ),
+            child: TextField(
+              onChanged: (val) => ref.read(courseSearchQueryProvider.notifier).update(val),
+              decoration: InputDecoration(
+                hintText: 'Search courses or keywords...',
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                suffixIcon: query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () => ref.read(courseSearchQueryProvider.notifier).update(''),
+                      )
+                    : null,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _FilterChip(
-                label: 'All Categories',
-                isSelected: selectedCategory == null,
-                onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update(null),
-                activeColor: accentColor,
-              ),
-              _FilterChip(
-                label: 'Primary',
-                isSelected: selectedCategory == 'PRIMARY',
-                onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update('PRIMARY'),
-                activeColor: accentColor,
-              ),
-              _FilterChip(
-                label: 'Secondary',
-                isSelected: selectedCategory == 'SECONDARY',
-                onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update('SECONDARY'),
-                activeColor: accentColor,
-              ),
-              _FilterChip(
-                label: 'Higher Ed',
-                isSelected: selectedCategory == 'HIGHER_ED',
-                onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update('HIGHER_ED'),
-                activeColor: accentColor,
-              ),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _FilterChip(
+                  label: 'All Courses',
+                  isSelected: selectedCategory == null,
+                  onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update(null),
+                  activeColor: accentColor,
+                ),
+                const SizedBox(width: 8),
+                _FilterChip(
+                  label: 'Higher Ed',
+                  isSelected: selectedCategory == 'HIGHER_ED',
+                  onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update('HIGHER_ED'),
+                  activeColor: accentColor,
+                ),
+                const SizedBox(width: 8),
+                _FilterChip(
+                  label: 'Secondary',
+                  isSelected: selectedCategory == 'SECONDARY',
+                  onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update('SECONDARY'),
+                  activeColor: accentColor,
+                ),
+                const SizedBox(width: 8),
+                _FilterChip(
+                  label: 'Primary',
+                  isSelected: selectedCategory == 'PRIMARY',
+                  onSelected: (_) => ref.read(courseCategoryFilterProvider.notifier).update('PRIMARY'),
+                  activeColor: accentColor,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -220,41 +239,49 @@ class CourseListScreen extends ConsumerWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: MinimalContainer(
-          padding: const EdgeInsets.all(28),
-          borderRadius: 24,
-          color: theme.colorScheme.surfaceContainerHighest,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
+        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
                 isFiltered ? Icons.search_off_rounded : Icons.school_outlined,
-                size: 64,
-                color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                size: 48,
+                color: AppColors.primary,
               ),
-              const SizedBox(height: 16),
-              Text(
-                isFiltered
-                    ? 'No courses match your search or filter.'
-                    : (isInstructor
-                        ? "You haven't created any courses yet."
-                        : 'No courses available at the moment.'),
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              isFiltered ? 'No matches found' : 'No courses available',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isFiltered
+                  ? 'Try adjusting your search query or filters.'
+                  : (isInstructor
+                      ? "Start by creating your first course to share your knowledge."
+                      : 'Enroll in a course to start your learning journey.'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            if (isFiltered) ...[
+              const SizedBox(height: 24),
+              MinimalButton(
+                width: 180,
+                onPressed: () {
+                  ref.read(courseSearchQueryProvider.notifier).update('');
+                  ref.read(courseCategoryFilterProvider.notifier).update(null);
+                },
+                child: const Text('Clear Filters'),
               ),
-              if (isFiltered) ...[
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () {
-                    ref.read(courseSearchQueryProvider.notifier).update('');
-                    ref.read(courseCategoryFilterProvider.notifier).update(null);
-                  },
-                  child: const Text('Clear Filters'),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -277,148 +304,127 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: onSelected,
-      selectedColor: activeColor.withValues(alpha: 0.2),
-      checkmarkColor: activeColor,
+      selectedColor: activeColor,
+      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+      checkmarkColor: Colors.black,
       labelStyle: TextStyle(
-        color: isSelected ? activeColor : theme.colorScheme.onSurfaceVariant,
-        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-        fontSize: 12,
+        color: isSelected ? Colors.black : theme.colorScheme.onSurfaceVariant,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 13,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: isSelected ? activeColor : theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: isSelected ? activeColor : (isDark ? AppColors.darkBorder : AppColors.border),
+        ),
       ),
+      showCheckmark: false,
     );
   }
 }
 
-class _CourseCard extends StatelessWidget {
-  const _CourseCard({
+class _ModernCourseCard extends ConsumerWidget {
+  const _ModernCourseCard({
     required this.course,
     required this.isOwner,
     required this.showJoin,
     required this.onTap,
-    required this.onJoin,
-    required this.accentColor,
   });
 
   final CourseSummary course;
   final bool isOwner;
   final bool showJoin;
   final VoidCallback onTap;
-  final VoidCallback onJoin;
-  final Color accentColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final courseAccent = getGradientColor(course.title + course.id);
+    final isDark = theme.brightness == Brightness.dark;
+    final formatUrl = ref.watch(urlFormatterProvider);
 
-    return MinimalContainer(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(24),
-      borderRadius: 32,
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(32),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: theme.brightness == Brightness.dark ? Colors.white10 : courseAccent.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
+            // Thumbnail Area
+            Expanded(
+              flex: 5,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: (course.imageUrl?.isNotEmpty == true)
+                        ? Image.network(formatUrl(course.imageUrl), fit: BoxFit.cover)
+                        : Center(child: Icon(Icons.school_rounded, color: AppColors.primary.withValues(alpha: 0.3), size: 48)),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: (course.imageUrl != null && course.imageUrl!.isNotEmpty && course.imageUrl!.startsWith('http'))
-                      ? Image.network(
-                          course.imageUrl!,
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Icon(Icons.auto_stories_rounded, color: theme.brightness == Brightness.dark ? Colors.white70 : courseAccent, size: 32),
-                          ),
-                        )
-                      : Icon(Icons.auto_stories_rounded, color: theme.brightness == Brightness.dark ? Colors.white70 : courseAccent, size: 32),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _Tag(label: course.level.toUpperCase(), color: theme.brightness == Brightness.dark ? Colors.white70 : courseAccent),
-                          if (course.enrollmentStatus == 'approved') const _Tag(label: 'ENROLLED', color: AppColors.success),
-                          if (course.enrollmentStatus == 'pending') const _Tag(label: 'PENDING APPROVAL', color: AppColors.orange),
-                          if (isOwner) const _Tag(label: 'OWNER', color: Colors.black87),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        course.title,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        course.instructorName, 
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(
-              course.description.isNotEmpty
-                  ? course.description
-                  : 'Dive into this course to master new skills and expand your horizons.',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                _Stat(icon: Icons.view_module_rounded, label: '${course.modulesCount} Modules'),
-                const SizedBox(width: 24),
-                _Stat(icon: Icons.play_lesson_rounded, label: '${course.lessonsCount} Lessons'),
-                const Spacer(),
-                if (course.progressPercent > 0)
-                  MinimalContainer(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    borderRadius: 8,
-                    color: AppColors.success.withValues(alpha: 0.1),
-                    child: Text(
-                      '${course.progressPercent.toStringAsFixed(0)}% Done',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.success),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: _StatusBadge(
+                      label: course.level.toUpperCase(),
+                      color: AppColors.textHeader.withValues(alpha: 0.8),
+                      isDark: true,
                     ),
                   ),
-              ],
+                ],
+              ),
+            ),
+            // Content Area
+            Expanded(
+              flex: 6,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      course.instructorName,
+                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        const Icon(Icons.layers_outlined, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text('${course.modulesCount} modules', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        const Spacer(),
+                        if (isOwner) 
+                           const _StatusBadge(label: 'OWNER', color: Colors.black)
+                        else if (course.enrollmentStatus == 'approved')
+                           const _StatusBadge(label: 'ENROLLED', color: AppColors.primary)
+                        else if (course.enrollmentStatus == 'pending')
+                           const _StatusBadge(label: 'PENDING', color: AppColors.warning),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -427,56 +433,29 @@ class _CourseCard extends StatelessWidget {
   }
 }
 
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label, required this.color});
-
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label, required this.color, this.isDark = false});
   final String label;
   final Color color;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: isDark ? Colors.black87 : color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: color,
+          color: isDark ? Colors.white : color,
           fontSize: 9,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
         ),
       ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }

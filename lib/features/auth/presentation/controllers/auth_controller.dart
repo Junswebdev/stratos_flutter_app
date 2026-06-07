@@ -83,14 +83,24 @@ class AuthController extends AsyncNotifier<AuthState> {
         return false;
       }
 
-      // In a real implementation, you would send the googleUser.authentication token to your backend
-      // await _repository.loginWithGoogle(googleUser.authentication.idToken);
+      final auth = await googleUser.authentication;
+      final idToken = auth.idToken;
+
+      if (idToken == null) {
+        state = AsyncData(AuthState(isAuthenticated: false, error: 'Google authentication failed: Missing ID Token'));
+        return false;
+      }
+
+      final session = await _repository.loginWithGoogle(idToken);
       
-      state = AsyncData(AuthState(isAuthenticated: true, role: 'student'));
+      state = AsyncData(AuthState(
+        isAuthenticated: true, 
+        role: session.user?.role.name ?? 'student',
+      ));
       return true;
     } catch (e) {
       state = AsyncData(
-        AuthState(isAuthenticated: false, error: 'Google Sign In failed'),
+        AuthState(isAuthenticated: false, error: _extractMessage(e)),
       );
       return false;
     }

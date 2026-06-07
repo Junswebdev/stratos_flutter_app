@@ -1,4 +1,5 @@
 import '../../../data/json_parsing.dart';
+import '../../../core/utils/url_utils.dart';
 import '../../auth/domain/user_model.dart';
 import 'lesson_model.dart';
 
@@ -113,7 +114,7 @@ class CourseModel {
       ) ??
           readString(json, const ['instructor_name', 'instructorName', 'teacher_name']),
       joinCode: readString(json, const ['join_code', 'joinCode']) ?? '',
-      imageUrl: readString(json, const ['image_url', 'imageUrl', 'poster_url']),
+      imageUrl: formatFullUrl(readString(json, const ['image_url', 'imageUrl', 'poster_url'])),
       isPublished: readBool(json, const ['is_published', 'isPublished', 'published']) ?? true,
       createdAt: readDateTime(json, const ['created_at', 'createdAt']),
       updatedAt: readDateTime(json, const ['updated_at', 'updatedAt']),

@@ -9,6 +9,7 @@ import 'package:stratos_app/data/dio_client.dart';
 import 'package:stratos_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:stratos_app/features/home/application/home_providers.dart';
 import 'package:stratos_app/features/home/data/home_models.dart';
+import '../../../../core/utils/locale_provider.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.child});
@@ -25,7 +26,7 @@ class MainShell extends ConsumerWidget {
 
     final isWide = MediaQuery.of(context).size.width >= 960;
     final currentLocation = GoRouterState.of(context).matchedLocation;
-    final navItems = _navItems(user);
+    final navItems = _navItems(context, user);
     final themeMode = ref.watch(themeModeProvider);
     final themeIcon = _themeIcon(themeMode);
     final selectedIndex = _selectedIndex(currentLocation, navItems);
@@ -97,20 +98,21 @@ class MainShell extends ConsumerWidget {
     );
   }
 
-  List<_NavItem> _navItems(AppUser? user) {
+  List<_NavItem> _navItems(BuildContext context, AppUser? user) {
+    final l10n = AppLocalizations.of(context);
     final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
     final isAdmin = user?.role == 'admin';
 
     return [
-      const _NavItem(icon: Icons.dashboard_outlined, label: 'Home', routeName: 'home', matches: ['/']),
-      _NavItem(icon: Icons.school_outlined, label: isInstructor ? 'Academy' : 'Courses', routeName: 'courses', matches: const ['/courses']),
-      const _NavItem(icon: Icons.forum_outlined, label: 'Messages', routeName: 'messages', matches: ['/messages']),
-      const _NavItem(icon: Icons.campaign_outlined, label: 'Announce', routeName: 'announcements', matches: ['/announcements']),
+      _NavItem(icon: Icons.dashboard_outlined, label: l10n.translate('home'), routeName: 'home', matches: const ['/']),
+      _NavItem(icon: Icons.school_outlined, label: isInstructor ? l10n.translate('academy') : l10n.translate('courses'), routeName: 'courses', matches: const ['/courses']),
+      _NavItem(icon: Icons.forum_outlined, label: l10n.translate('messages'), routeName: 'messages', matches: const ['/messages']),
+      _NavItem(icon: Icons.campaign_outlined, label: l10n.translate('announce'), routeName: 'announcements', matches: const ['/announcements']),
       if (isInstructor)
-        const _NavItem(icon: Icons.analytics_outlined, label: 'Reports', routeName: 'reports', matches: ['/reports']),
+        _NavItem(icon: Icons.analytics_outlined, label: l10n.translate('reports'), routeName: 'reports', matches: const ['/reports']),
       if (isAdmin)
-        const _NavItem(icon: Icons.admin_panel_settings_outlined, label: 'Admin', routeName: 'admin', matches: ['/admin']),
-      const _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', routeName: 'settings', matches: ['/settings']),
+        _NavItem(icon: Icons.admin_panel_settings_outlined, label: l10n.translate('admin'), routeName: 'admin', matches: const ['/admin']),
+      _NavItem(icon: Icons.person_outline_rounded, label: l10n.translate('settings'), routeName: 'settings', matches: const ['/settings']),
     ];
   }
 }
@@ -193,128 +195,100 @@ class _ShellRail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
-    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
+    const accentColor = AppColors.primary;
 
     return Container(
-      width: 260,
+      width: 240,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
-        border: isDark
-            ? Border(right: BorderSide(color: AppColors.darkBorder, width: 1))
-            : null,
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(4, 0),
-                ),
-              ],
+        border: Border(
+          right: BorderSide(
+            color: isDark ? AppColors.darkBorder : AppColors.border,
+            width: 1.0,
+          ),
+        ),
       ),
       child: Column(
         children: [
-          // Logo / brand
+          // Logo / brand - Clean and simple
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
             child: Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(10),
+                    color: accentColor,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.auto_stories_rounded, color: theme.colorScheme.onPrimary, size: 20),
+                  child: const Icon(Icons.school_rounded, color: Colors.black, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Stratos',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.0,
+                  'Class IQ',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
                     color: theme.colorScheme.onSurface,
-                    fontSize: 20,
                   ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(_themeIcon(ref.watch(themeModeProvider)),
-                      color: theme.colorScheme.onSurfaceVariant, size: 20),
-                  onPressed: onToggleTheme,
-                  tooltip: 'Toggle theme',
                 ),
               ],
             ),
           ),
 
-          // Nav items
+          // Nav items - Minimalist list
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: navItems.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 2),
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
               itemBuilder: (context, index) {
                 final item = navItems[index];
                 final isSelected = _matchesLocation(currentLocation, item.matches);
                 final bool isMessages = item.routeName == 'messages';
 
-                return Material(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => onNavigate(item.routeName),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? accentColor.withValues(alpha: isDark ? 0.15 : 0.08)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          if (isMessages && unreadMessages > 0)
-                            Badge(
-                              label: Text('$unreadMessages'),
-                              child: Icon(
-                                item.icon,
-                                color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
-                                size: 20,
-                              ),
-                            )
-                          else
-                            Icon(
+                return InkWell(
+                  onTap: () => onNavigate(item.routeName),
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? accentColor.withValues(alpha: isDark ? 0.15 : 0.08)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        if (isMessages && unreadMessages > 0)
+                          Badge(
+                            label: Text('$unreadMessages'),
+                            backgroundColor: accentColor,
+                            textColor: Colors.black,
+                            child: Icon(
                               item.icon,
                               color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
                               size: 20,
                             ),
-                          const SizedBox(width: 12),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                              color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
-                              fontSize: 14,
-                            ),
+                          )
+                        else
+                          Icon(
+                            item.icon,
+                            color: isSelected ? accentColor : theme.colorScheme.onSurfaceVariant,
+                            size: 20,
                           ),
-                          if (isSelected) ...[
-                            const Spacer(),
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: accentColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                        const SizedBox(width: 12),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -322,7 +296,7 @@ class _ShellRail extends ConsumerWidget {
             ),
           ),
 
-          // Profile card
+          // Bottom actions & Profile
           Padding(
             padding: const EdgeInsets.all(16),
             child: _RailProfileCard(user: user, onLogout: onLogout),
@@ -343,20 +317,16 @@ class _RailProfileCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isInstructor = user?.role == 'instructor' || user?.role == 'admin';
-    final accentColor = isInstructor ? theme.colorScheme.primary : theme.colorScheme.secondary;
+    final accentColor = AppColors.primary;
     final serverBaseUrl = ref.watch(serverBaseUrlProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkCard
-            : AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-        border: isDark
-            ? Border.all(color: AppColors.darkBorder, width: 1)
-            : null,
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Row(
         children: [
@@ -366,11 +336,11 @@ class _RailProfileCard extends ConsumerWidget {
                     ? user!.avatarUrl!
                     : '$serverBaseUrl${user!.avatarUrl!.startsWith('/') ? '' : '/'}${user!.avatarUrl!}')
                 : null,
-            radius: 18,
+            radius: 16,
             backgroundColor: accentColor.withValues(alpha: 0.15),
             fallbackText: _safeInitial(user),
             fallbackTextColor: accentColor,
-            fontSize: 12,
+            fontSize: 11,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -380,29 +350,23 @@ class _RailProfileCard extends ConsumerWidget {
               children: [
                 Text(
                   user?.displayName ?? 'User',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  user?.role.toUpperCase() ?? 'STUDENT',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: accentColor,
-                    letterSpacing: 0.5,
-                  ),
+                  user?.role == 'instructor' ? l10n.translate('instructor') : l10n.translate('student'),
+                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: Icon(Icons.logout_rounded,
-                size: 18, color: theme.colorScheme.onSurfaceVariant),
-            tooltip: 'Sign out',
+            icon: const Icon(Icons.logout_rounded, size: 18),
             onPressed: onLogout,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ],
       ),

@@ -113,90 +113,102 @@ class _CourseReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MinimalContainer(
+    return Container(
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
-      borderRadius: 24,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('COURSE REPORT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.primary, letterSpacing: 1)),
+                    Text('ACADEMIC REPORT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 0.5)),
                     const SizedBox(height: 4),
-                    Text(report.courseTitle, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(report.courseTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                   ],
                 ),
               ),
-              MinimalContainer(
+              Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                borderRadius: 12,
-                color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                showBorder: false,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Column(
                   children: [
-                    Text('${report.studentCount}', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 18)),
-                    Text('STUDENTS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                    Text('${report.studentCount}', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 18)),
+                    const Text('STUDENTS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.primary)),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           
-          // AI Insight Box
-          MinimalContainer(
-            padding: const EdgeInsets.all(16),
-            borderRadius: 16,
-            color: theme.colorScheme.secondary.withValues(alpha: 0.05),
-            showBorder: false,
-            child: Row(
+          // AI Insight Box - Minimalist Gold
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.02) : AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.secondary, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('AI INSIGHT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.secondary)),
-                      const SizedBox(height: 4),
-                      Text(report.aiInsight, style: const TextStyle(fontSize: 13, height: 1.4, fontStyle: FontStyle.italic)),
-                    ],
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 16),
+                    SizedBox(width: 8),
+                    Text('AI Performance Insights', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  report.aiInsight, 
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.6, 
+                    fontStyle: FontStyle.italic,
+                    color: theme.colorScheme.onSurface,
+                  )
                 ),
               ],
             ),
           ),
           
-          const SizedBox(height: 24),
-          const Text('Student Progress Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 32),
+          const Text('Student Progress', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+          const SizedBox(height: 20),
           
           ...report.students.take(3).map((s) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(s.studentName, style: const TextStyle(fontSize: 13)),
-                    Text('${s.progress.toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(s.studentName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('${s.progress.toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.primary)),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
                     value: s.progress / 100,
                     minHeight: 4,
-                    backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
-                    color: s.progress > 70 ? AppColors.success : (s.progress > 30 ? AppColors.orange : AppColors.danger),
+                    backgroundColor: isDark ? Colors.white10 : AppColors.border,
+                    color: s.progress > 80 ? AppColors.success : (s.progress > 40 ? AppColors.primary : AppColors.danger),
                   ),
                 ),
               ],
@@ -206,18 +218,17 @@ class _CourseReportCard extends StatelessWidget {
           if (report.students.length > 3)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Center(
-                child: TextButton(
-                  onPressed: () => context.pushNamed(
-                    'course_report_students',
-                    pathParameters: {'courseId': report.courseId},
-                    extra: {
-                      'title': report.courseTitle,
-                      'students': report.students,
-                    },
-                  ),
-                  child: Text('View all ${report.studentCount} students', style: const TextStyle(fontSize: 12)),
+              child: MinimalButton(
+                height: 40,
+                onPressed: () => context.pushNamed(
+                  'course_report_students',
+                  pathParameters: {'courseId': report.courseId},
+                  extra: {
+                    'title': report.courseTitle,
+                    'students': report.students,
+                  },
                 ),
+                child: Text('View All Students (${report.studentCount})', style: const TextStyle(fontSize: 12)),
               ),
             ),
         ],

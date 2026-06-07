@@ -9,6 +9,7 @@ import '../../application/home_providers.dart';
 import '../../data/home_models.dart';
 import '../widgets/async_state_view.dart';
 import '../widgets/dashboard_widgets.dart';
+import '../../../../core/utils/locale_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -92,27 +93,47 @@ class _DashboardLayout extends StatelessWidget {
   Widget _buildHeader(BuildContext context, bool isInstructor) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          'Dashboard',
-          style: theme.textTheme.headlineLarge?.copyWith(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.2,
-            color: isDark ? Colors.white : AppColors.textHeader,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.translate('dashboard'),
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.0,
+                  color: isDark ? Colors.white : AppColors.textHeader,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "${l10n.translate('welcome_back')}, ${data.user?.displayName ?? 'Student'}. Here's what's happening today.",
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w400,
+                  fontSize: 15,
+                ),
+              ),
+            ],
           ),
-          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 4),
-        Text(
-          "Welcome back! Here's your learning overview.",
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
+        if (isInstructor)
+          MinimalButton(
+            width: 160,
+            onPressed: () => context.pushNamed('create_course'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.add_rounded, size: 20),
+                const SizedBox(width: 8),
+                Text(l10n.translate('create_course')),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -120,6 +141,7 @@ class _DashboardLayout extends StatelessWidget {
   Widget _buildMainArea(BuildContext context, bool isInstructor) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
 
     if (isInstructor) {
       final myCourses = data.courses.where((c) => c.instructorId == data.user?.id).toList();
@@ -127,22 +149,33 @@ class _DashboardLayout extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          NetflixContentRow<CourseSummary>(
-            title: 'Your Managed Courses',
-            subtitle: 'Quick access to curriculum and students',
-            items: myCourses,
-            cardWidth: 220,
-            height: 280,
-            onSeeAll: () => context.goNamed('courses'),
-            itemBuilder: (context, course, index) {
-              return NetflixPosterCard(
-                title: course.title,
-                subtitle: '${course.lessonsCount} lessons • ${course.announcementsCount} updates',
-                imageUrl: course.imageUrl,
-                gradientColors: getCardGradient(course.title + course.id),
-                showPlayButton: false,
-                onTap: () => context.pushNamed('manage_course', pathParameters: {'id': course.id}),
-              );
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.translate('managed_courses'),
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              TextButton(
+                onPressed: () => context.goNamed('courses'),
+                child: Text(l10n.translate('see_all'), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: myCourses.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.1,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemBuilder: (context, index) {
+              final course = myCourses[index];
+              return _ModernCourseCard(course: course, isInstructor: true);
             },
           ),
           const SizedBox(height: 48),
@@ -160,107 +193,28 @@ class _DashboardLayout extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'My Courses',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+                l10n.translate('continue_learning'),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
                   color: isDark ? Colors.white : AppColors.textHeader,
                 ),
               ),
               TextButton(
                 onPressed: () => context.goNamed('courses'),
-                child: Text('View All >', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                child: const Text('View All', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 200,
+            height: 220,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: data.enrollments.length,
               separatorBuilder: (context, index) => const SizedBox(width: 16),
               itemBuilder: (context, index) {
                 final enrollment = data.enrollments[index];
-                return GestureDetector(
-                  onTap: enrollment.courseId.isEmpty
-                    ? null
-                    : () => context.pushNamed(
-                        'course_detail',
-                        pathParameters: {'id': enrollment.courseId},
-                      ),
-                  child: Container(
-                    width: 300,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: const BoxDecoration(
-                                color: AppColors.pastelTeal,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.menu_book_rounded, color: Colors.white),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.pastelTeal.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text(
-                                'In Progress',
-                                style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Text(
-                          enrollment.courseTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        const Row(
-                          children: [
-                            Icon(Icons.access_time_rounded, size: 14, color: Colors.grey),
-                            SizedBox(width: 4),
-                            Text('0/0 lessons', style: TextStyle(fontSize: 12, color: Colors.grey)), 
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Progress', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                            Text('${enrollment.progressPercent.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, color: AppColors.secondary, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: enrollment.progressPercent / 100,
-                            backgroundColor: AppColors.border,
-                            color: AppColors.secondary,
-                            minHeight: 4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return _ModernEnrollmentCard(enrollment: enrollment);
               },
             ),
           ),
@@ -298,70 +252,63 @@ class _StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (stats == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1000 ? 4 : (constraints.maxWidth > 600 ? 2 : 1);
+        final crossAxisCount = constraints.maxWidth > 1200 ? 4 : (constraints.maxWidth > 600 ? 2 : 1);
 
         final List<_StatCard> cards = isInstructor
             ? [
                 _StatCard(
-                  title: 'Courses Created',
-                  value: '${stats!.coursesCreated}',
-                  subtitle: 'Active courses',
+                  title: l10n.translate('created'),
+                  value: '${stats!.coursesCreated}', 
+                  subtitle: l10n.translate('courses'),
                   icon: Icons.auto_stories_outlined,
-                  color: AppColors.pastelTeal,
                 ),
                 _StatCard(
-                  title: 'Active Students',
+                  title: l10n.translate('students'),
                   value: '${stats!.totalStudents}',
-                  subtitle: 'Across all courses',
+                  subtitle: l10n.translate('enrolled'),
                   icon: Icons.people_outline,
-                  color: AppColors.pastelBlue,
                 ),
                 _StatCard(
-                  title: 'Avg. Progress',
+                  title: l10n.translate('progress'),
                   value: '${stats!.averageProgress.toStringAsFixed(0)}%',
-                  subtitle: 'Student completion',
+                  subtitle: 'Completion',
                   icon: Icons.insights,
-                  color: AppColors.pastelAmber,
                 ),
                 _StatCard(
-                  title: 'Unread Msgs',
+                  title: l10n.translate('messages'),
                   value: '${stats!.unreadMessages}',
-                  subtitle: 'Needs attention',
+                  subtitle: 'Unread',
                   icon: Icons.forum_outlined,
-                  color: AppColors.pastelPurple,
                 ),
               ]
             : [
                 _StatCard(
-                  title: 'Enrolled Courses',
+                  title: l10n.translate('enrolled'),
                   value: '${stats!.enrolledCourses}',
-                  subtitle: 'Active courses',
+                  subtitle: 'Active',
                   icon: Icons.menu_book_rounded,
-                  color: AppColors.pastelTeal,
                 ),
                 _StatCard(
-                  title: 'Avg. Progress',
+                  title: l10n.translate('progress'),
                   value: '${stats!.averageProgress.toStringAsFixed(0)}%',
-                  subtitle: 'Across all courses',
+                  subtitle: 'Overall',
                   icon: Icons.trending_up_rounded,
-                  color: AppColors.pastelBlue,
                 ),
                 _StatCard(
-                  title: 'Hours Learned',
-                  value: '0.0', // Placeholder, implement if backend supports it
-                  subtitle: 'Total time invested',
+                  title: l10n.translate('invested'),
+                  value: '0.0',
+                  subtitle: 'Hours',
                   icon: Icons.access_time_rounded,
-                  color: AppColors.pastelAmber,
                 ),
                 _StatCard(
-                  title: 'Completed',
+                  title: l10n.translate('finished'),
                   value: '${stats!.completedLessons}',
-                  subtitle: 'Courses finished',
+                  subtitle: l10n.translate('lessons'),
                   icon: Icons.military_tech_outlined,
-                  color: AppColors.pastelPurple,
                 ),
               ];
 
@@ -371,7 +318,7 @@ class _StatsGrid extends StatelessWidget {
           itemCount: cards.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 1.8, 
+            childAspectRatio: 1.4, 
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -388,14 +335,12 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.subtitle,
     required this.icon,
-    required this.color,
   });
 
   final String title;
   final String value;
   final String subtitle;
   final IconData icon;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -405,49 +350,203 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textHeader,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: AppColors.primary),
+              ),
+              Text(
+                subtitle.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
               ),
-              Icon(icon, color: AppColors.textHeader.withValues(alpha: 0.6), size: 24),
             ],
           ),
+          const Spacer(),
           Text(
             value,
-            style: theme.textTheme.headlineLarge?.copyWith(
+            style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w900,
-              color: AppColors.textHeader,
-              fontSize: 36,
+              fontSize: 32,
+              letterSpacing: -1.0,
+              color: isDark ? Colors.white : AppColors.textHeader,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
-            subtitle,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.textHeader.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
+            title,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+}
+class _ModernCourseCard extends StatelessWidget {
+  const _ModernCourseCard({required this.course, this.isInstructor = false});
+  final CourseSummary course;
+  final bool isInstructor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: () => context.pushNamed(
+        isInstructor ? 'manage_course' : 'course_detail',
+        pathParameters: {'id': course.id},
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: (course.imageUrl?.isNotEmpty == true)
+                    ? Image.network(course.imageUrl!, fit: BoxFit.cover)
+                    : Center(child: Icon(Icons.school_rounded, color: AppColors.primary.withValues(alpha: 0.3), size: 40)),
+              ),
+            ),
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${course.lessonsCount} lessons • ${course.instructorName}',
+                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModernEnrollmentCard extends StatelessWidget {
+  const _ModernEnrollmentCard({required this.enrollment});
+  final EnrollmentSummary enrollment;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: () => context.pushNamed(
+        'course_detail',
+        pathParameters: {'id': enrollment.courseId},
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.play_arrow_rounded, color: AppColors.primary),
+                ),
+                const Spacer(),
+                const Text('IN PROGRESS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: AppColors.primary)),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              enrollment.courseTitle,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${enrollment.progressPercent.toStringAsFixed(0)}% complete', style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: enrollment.progressPercent / 100,
+                minHeight: 3,
+                backgroundColor: isDark ? Colors.white10 : AppColors.border,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -514,17 +613,17 @@ class _AIWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = isInstructor ? AppColors.primary : AppColors.secondary;
+    const accentColor = AppColors.primary;
 
     return DashboardWidgetContainer(
-      title: isInstructor ? 'AI Teaching Assistant' : 'AI Study Buddy',
+      title: isInstructor ? 'AI Assistant' : 'AI Study Buddy',
       child: Column(
         children: [
-          Icon(Icons.auto_awesome_rounded, color: accentColor, size: 40),
+          const Icon(Icons.auto_awesome_rounded, color: accentColor, size: 40),
           const SizedBox(height: 16),
           Text(
             isInstructor ? 'Academy Insights' : 'Personal Tutor',
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
           ),
           const SizedBox(height: 8),
           Text(
@@ -559,11 +658,11 @@ class _DistributionWidget extends StatelessWidget {
 
     return MinimalContainer(
       padding: const EdgeInsets.all(24),
-      borderRadius: 24,
+      borderRadius: 12,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Distribution', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+          Text('Distribution', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text('Courses by education level', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 24),
@@ -590,10 +689,10 @@ class _DistributionWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(2),
                     child: LinearProgressIndicator(
                       value: percentage,
-                      minHeight: 6,
+                      minHeight: 4,
                       backgroundColor: AppColors.border,
                       color: AppColors.primary,
                     ),
@@ -658,10 +757,10 @@ class _ActionItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.orange.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: AppColors.orange, size: 20),
+            child: Icon(icon, color: AppColors.primary, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -753,7 +852,7 @@ class _ScheduleWidget extends ConsumerWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 2,
+                      width: 3,
                       height: 32,
                       decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
                     ),
@@ -763,7 +862,7 @@ class _ScheduleWidget extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(item.timeStr, style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                          Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -795,11 +894,11 @@ class _AnnouncementsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return MinimalContainer(
       padding: const EdgeInsets.all(24),
-      borderRadius: 24,
-      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: 12,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -807,16 +906,16 @@ class _AnnouncementsSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Latest Updates', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-              const Icon(Icons.campaign_outlined, color: AppColors.textSecondary),
+              Text(l10n.translate('recent_announcements'), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const Icon(Icons.campaign_outlined, color: AppColors.textSecondary, size: 20),
             ],
           ),
           const SizedBox(height: 24),
           if (announcements.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('No updates yet', style: TextStyle(color: Colors.grey)),
+                padding: const EdgeInsets.all(32),
+                child: Text(l10n.translate('no_announcements'), style: const TextStyle(color: Colors.grey)),
               ),
             )
           else
@@ -845,13 +944,13 @@ class _AnnouncementItem extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.notifications_none_rounded, color: AppColors.primary, size: 20),
+          child: const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 16),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -861,13 +960,13 @@ class _AnnouncementItem extends StatelessWidget {
             children: [
               Text(
                 announcement.title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
               Text(
-                '${announcement.courseTitle} • ${announcement.authorName}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                announcement.courseTitle,
+                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
@@ -876,7 +975,7 @@ class _AnnouncementItem extends StatelessWidget {
         ),
         Text(
           announcement.createdAt != null ? '${announcement.createdAt!.day}/${announcement.createdAt!.month}' : '',
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],
     );

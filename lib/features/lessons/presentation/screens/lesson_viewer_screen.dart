@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../../courses/domain/lesson_model.dart';
 import '../../../home/presentation/widgets/async_state_view.dart';
+import '../../../home/application/home_providers.dart';
+import '../../../../data/dio_client.dart';
+import '../../../../core/theme.dart';
+import '../../../../core/widgets/minimalist_widgets.dart';
 import '../../data/lesson_repository.dart';
 import '../controllers/lesson_controller.dart';
 import 'quiz_screen.dart';
@@ -98,24 +103,24 @@ class _LessonContent extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             lesson.title,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.headlineLarge?.copyWith(fontSize: 28),
           ),
           if (lesson.description != null && lesson.description!.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               lesson.description!,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: 40),
           _ContentBody(lesson: lesson),
         ],
       ),
@@ -149,10 +154,10 @@ class _ContentBody extends StatelessWidget {
       return _TextContent(content: lesson.content!);
     }
     
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Text('No content available for this lesson.'),
+        padding: const EdgeInsets.all(40),
+        child: Text('No content available for this lesson.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ),
     );
   }
@@ -163,34 +168,35 @@ class _ImageContent extends StatelessWidget {
 
   final String imageUrl;
 
-  String _buildFullUrl(String path) {
+  String _buildFullUrl(String path, WidgetRef ref) {
     if (path.startsWith('http')) return path;
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1/');
-    // Clean up the URL construction
-    final base = baseUrl.replaceAll('/api/v1/', '');
-    return '$base$path';
+    final serverBaseUrl = ref.read(serverBaseUrlProvider);
+    return '$serverBaseUrl${path.startsWith('/') ? '' : '/'}$path';
   }
 
   @override
   Widget build(BuildContext context) {
-    final fullUrl = _buildFullUrl(imageUrl);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+    return Consumer(
+      builder: (context, ref, _) {
+        final fullUrl = _buildFullUrl(imageUrl, ref);
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Image.network(
             fullUrl,
             width: double.infinity,
             fit: BoxFit.contain,
             errorBuilder: (ctx, err, stack) => Container(
               height: 200,
-              color: Colors.grey.shade300,
-              child: const Center(child: Icon(Icons.broken_image, size: 64, color: Colors.grey)),
+              color: AppColors.background,
+              child: const Center(child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey)),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -202,67 +208,100 @@ class _TextContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: SelectableText(
         content,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
+        style: theme.textTheme.bodyLarge?.copyWith(height: 1.7, color: theme.colorScheme.onSurface),
       ),
     );
   }
 }
 
-class _VideoContent extends StatelessWidget {
+class _VideoContent extends StatefulWidget {
   const _VideoContent({required this.videoUrl});
 
   final String videoUrl;
 
-  String _buildFullUrl(String path) {
-    if (path.startsWith('http')) return path;
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1/');
-    final base = baseUrl.replaceAll('/api/v1/', '');
-    return '$base$path';
+  @override
+  State<_VideoContent> createState() => _VideoContentState();
+}
+
+class _VideoContentState extends State<_VideoContent> {
+  late YoutubePlayerController _controller;
+  String? _videoId;
+
+  @override
+  void initState() {
+    super.initState();
+    _videoId = YoutubePlayerController.convertUrlToId(widget.videoUrl);
+    _controller = YoutubePlayerController(
+      params: const YoutubePlayerParams(
+        showFullscreenButton: true,
+        showControls: true,
+        mute: false,
+        showVideoAnnotations: false,
+      ),
+    );
+    
+    if (_videoId != null) {
+      _controller.cueVideoById(videoId: _videoId!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final fullUrl = _buildFullUrl(videoUrl);
+    final theme = Theme.of(context);
     
+    if (_videoId == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.danger),
+            const SizedBox(height: 12),
+            Text('Invalid Video URL', style: theme.textTheme.titleMedium?.copyWith(color: Colors.white)),
+            const SizedBox(height: 8),
+            Text(widget.videoUrl, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          height: 220,
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.play_circle_fill, size: 64, color: Colors.white),
-                const SizedBox(height: 8),
-                Text(
-                  'Video Player',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-                ),
-              ],
-            ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: YoutubePlayerScaffold(
+            controller: _controller,
+            aspectRatio: 16 / 9,
+            builder: (context, player) => player,
           ),
         ),
         const SizedBox(height: 16),
-        SelectableText(
-          fullUrl,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-          ),
+        Text(
+          'Video Resource',
+          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -274,47 +313,60 @@ class _FileContent extends StatelessWidget {
 
   final String attachmentUrl;
 
-  String _buildFullUrl(String path) {
-    if (path.startsWith('http')) return path;
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1/');
-    final base = baseUrl.replaceAll('/api/v1/', '');
-    return '$base$path';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final fileName = attachmentUrl.split('/').last;
-    final fullUrl = _buildFullUrl(attachmentUrl);
 
-    return Card(
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
+    return Consumer(
+      builder: (context, ref, _) {
+        final serverBaseUrl = ref.read(serverBaseUrlProvider);
+        final fullUrl = attachmentUrl.startsWith('http')
+            ? attachmentUrl
+            : '$serverBaseUrl${attachmentUrl.startsWith('/') ? '' : '/'}$attachmentUrl';
+
+        return Container(
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.red.shade100,
-            borderRadius: BorderRadius.circular(8),
+            color: isDark ? AppColors.darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
           ),
-          child: const Icon(Icons.picture_as_pdf, color: Colors.red),
-        ),
-        title: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: const Text('Document attached'),
-        trailing: IconButton(
-          icon: const Icon(Icons.open_in_new),
-          tooltip: 'Open document',
-          onPressed: () async {
-             final uri = Uri.parse(fullUrl);
-             if (await canLaunchUrl(uri)) {
-               await launchUrl(uri, mode: LaunchMode.externalApplication);
-             } else {
-               if (context.mounted) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(content: Text('Could not open document')),
-                 );
-               }
-             }
-          },
-        ),
-      ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.file_present_rounded, color: AppColors.primary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const Text('Learning Resource', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              MinimalButton(
+                width: 100,
+                height: 40,
+                borderRadius: 8,
+                onPressed: () async {
+                   final uri = Uri.parse(fullUrl);
+                   await launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+                child: const Text('Download', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

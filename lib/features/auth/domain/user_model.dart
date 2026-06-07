@@ -1,4 +1,5 @@
 import '../../../data/json_parsing.dart';
+import '../../../core/utils/url_utils.dart';
 
 enum UserRole {
   student,
@@ -104,7 +105,7 @@ class UserModel {
       lastName: readString(json, const ['last_name', 'lastName']),
       fullName: readString(json, const ['full_name', 'fullName', 'name']),
       phoneNumber: readString(json, const ['phone_number', 'phoneNumber', 'phone']),
-      avatarUrl: readString(json, const ['avatar_url', 'avatarUrl', 'profile_image', 'profileImage']),
+      avatarUrl: formatFullUrl(readString(json, const ['avatar_url', 'avatarUrl', 'profile_image', 'profileImage'])),
       role: UserRole.fromJson(readJsonValue(json, const ['role', 'user_role'])),
       eduLevel: EduLevel.fromJson(readJsonValue(json, const ['edu_level', 'eduLevel', 'education_level'])),
       isActive: readBool(json, const ['is_active', 'isActive']) ?? true,

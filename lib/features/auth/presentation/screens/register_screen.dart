@@ -138,35 +138,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Widget _buildIntroSection(ThemeData theme, {bool isMobile = false}) {
+    final isDark = theme.brightness == Brightness.dark;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(
-          'assets/images/background.jpg',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              child: const Center(
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  size: 48,
-                  color: AppColors.primary,
-                ),
-              ),
-            );
-          },
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.3),
-                Colors.black.withValues(alpha: 0.7),
-              ],
-            ),
+        Container(color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFF111111)),
+        Opacity(
+          opacity: 0.4,
+          child: Image.asset(
+            'assets/images/background.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
           ),
         ),
         Padding(
@@ -175,47 +157,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.auto_stories,
-                size: isMobile ? 64 : 80,
-                color: Colors.white,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.school_rounded, color: Colors.black, size: 28),
               ),
               const SizedBox(height: 32),
               Text(
-                'Join Stratos',
+                'Class IQ',
                 textAlign: isMobile ? TextAlign.center : TextAlign.start,
                 style: (isMobile ? theme.textTheme.displaySmall : theme.textTheme.displayMedium)
                     ?.copyWith(
                   color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.0,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.5,
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Start your journey with us today. Access\nworld-class courses, expert instructors,\nand a community of passionate learners.',
+                'Start your journey with Class IQ - a modern, minimalist platform designed for academic excellence.',
                 textAlign: isMobile ? TextAlign.center : TextAlign.start,
-                style: (isMobile ? theme.textTheme.titleMedium : theme.textTheme.headlineSmall)
-                    ?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontWeight: FontWeight.w300,
-                  height: 1.5,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w400,
+                  height: 1.6,
+                  fontSize: 16,
                 ),
               ),
-              if (isMobile) ...[
-                const SizedBox(height: 64),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Swipe to create account',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward, color: Colors.white70, size: 16),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -228,27 +200,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 450),
+          constraints: const BoxConstraints(maxWidth: 400),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Welcome text
               Text(
                 'Create Account',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
-                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Join Stratos and start learning',
-                style: theme.textTheme.bodyLarge?.copyWith(
+                'Sign up to begin your learning experience',
+                style: TextStyle(
                   color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 40),
@@ -256,8 +227,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               // Name field
               MinimalTextField(
                 controller: _nameController,
-                labelText: 'Full Name (Optional)',
-                prefixIcon: Icon(Icons.person_outline, size: 20, color: theme.colorScheme.primary),
+                labelText: 'Full name',
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 20),
@@ -265,8 +235,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               // Email field
               MinimalTextField(
                 controller: _emailController,
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined, size: 20, color: theme.colorScheme.primary),
+                labelText: 'Email address',
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
               ),
@@ -276,20 +245,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               MinimalTextField(
                 controller: _passwordController,
                 labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outlined, size: 20, color: theme.colorScheme.primary),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 18,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.next,
@@ -297,29 +261,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 20),
 
               // Role selector
-              MinimalContainer(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                   color: isDark ? AppColors.darkCard : Colors.white,
+                   borderRadius: BorderRadius.circular(12),
+                   border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+                ),
                 child: DropdownButtonFormField<UserRole>(
                   initialValue: _selectedRole,
                   dropdownColor: isDark ? AppColors.darkSurface : Colors.white,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
-                    labelText: 'Role',
-                    labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                    prefixIcon: Icon(Icons.badge_outlined, size: 20, color: theme.colorScheme.primary),
+                    labelText: 'Register as',
+                    labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: UserRole.student,
-                      child: Text('Student'),
-                    ),
-                    DropdownMenuItem(
-                      value: UserRole.instructor,
-                      child: Text('Instructor'),
-                    ),
+                    DropdownMenuItem(value: UserRole.student, child: Text('Student')),
+                    DropdownMenuItem(value: UserRole.instructor, child: Text('Instructor')),
                   ],
                   onChanged: (v) {
                     if (v != null) setState(() => _selectedRole = v);
@@ -331,78 +294,66 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               // Register button
               MinimalButton(
                 onPressed: authState.isLoading ? null : _register,
-                color: theme.colorScheme.primary,
+                color: AppColors.primary,
                 child: authState.isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          color: Colors.black,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                       )
                     : const Text(
-                        'CREATE ACCOUNT',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                        ),
+                        'Create Account',
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
                       ),
               ),
               const SizedBox(height: 32),
 
-              // Divider
               Row(
                 children: [
-                  Expanded(child: Divider(color: theme.colorScheme.outline)),
+                  Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'OR',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: theme.colorScheme.outline)),
+                  Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
                 ],
               ),
               const SizedBox(height: 32),
 
-              // Social Logins
               _SocialButton(
-                icon: Icons.g_mobiledata,
+                icon: Icons.g_mobiledata_rounded,
                 label: 'Sign up with Google',
-                color: isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade100,
-                textColor: isDark ? Colors.white : Colors.black,
-                onPressed: () =>
-                    ref.read(authControllerProvider.notifier).loginWithGoogle(),
+                color: isDark ? AppColors.darkSurface : Colors.white,
+                textColor: theme.colorScheme.onSurface,
+                onPressed: () => ref.read(authControllerProvider.notifier).loginWithGoogle(),
               ),
               const SizedBox(height: 32),
 
-              // Login link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Already have an account? ',
-                    style: theme.textTheme.bodyMedium,
+                    "Already have an account? ",
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        context.goNamed('login');
-                      }
+                  GestureDetector(
+                    onTap: () {
+                      if (context.canPop()) context.pop();
+                      else context.goNamed('login');
                     },
-                    child: Text(
-                      'Sign In',
+                    child: const Text(
+                      'Sign in',
                       style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        fontSize: 13,
                       ),
                     ),
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/utils/url_utils.dart';
 
 String _stringFromJson(
   Map<String, dynamic> json,
@@ -120,11 +121,11 @@ class AppUser {
       role: _stringFromJson(json, const ['role', 'user_role'], fallback: 'student').toLowerCase(),
       eduLevel: _stringFromJson(json, const ['edu_level', 'education_level'], fallback: ''),
       isActive: _boolFromJson(json, const ['is_active', 'active', 'enabled'], fallback: true),
-      avatarUrl: _stringFromJson(
+      avatarUrl: formatFullUrl(_stringFromJson(
         json,
         const ['avatar_url', 'avatarUrl', 'profile_image', 'profileImage'],
         fallback: '',
-      ),
+      )),
     );
   }
 }
@@ -242,7 +243,7 @@ class CourseSummary {
         fallback: _stringFromJson(json, const ['instructor_name', 'teacher_name'], fallback: 'Instructor'),
       ),
       level: _stringFromJson(json, const ['level', 'edu_level', 'education_level']),
-      imageUrl: _stringFromJson(json, const ['image_url', 'imageUrl', 'poster_url']),
+      imageUrl: formatFullUrl(_stringFromJson(json, const ['image_url', 'imageUrl', 'poster_url'])),
       isEnrolled: _boolFromJson(json, const ['is_enrolled', 'enrolled']),
       enrollmentStatus: _stringFromJson(json, const ['enrollment_status', 'status']),
       progressPercent: _doubleFromJson(json, const ['progress_percent', 'progress', 'completion_percent']),
@@ -307,7 +308,7 @@ class CourseDetailData extends CourseSummary {
         fallback: _stringFromJson(course, const ['instructor_name', 'teacher_name'], fallback: 'Instructor'),
       ),
       level: _stringFromJson(course, const ['level', 'edu_level', 'education_level']),
-      imageUrl: _stringFromJson(course, const ['image_url', 'imageUrl', 'poster_url']),
+      imageUrl: formatFullUrl(_stringFromJson(course, const ['image_url', 'imageUrl', 'poster_url'])),
       isEnrolled: _boolFromJson(course, const ['is_enrolled', 'enrolled']),
       enrollmentStatus: _stringFromJson(course, const ['enrollment_status', 'status']),
       progressPercent: _doubleFromJson(course, const ['progress_percent', 'progress', 'completion_percent']),
@@ -396,7 +397,7 @@ class EnrollmentSummary {
       status: _stringFromJson(json, const ['status', 'state'], fallback: 'active'),
       progressPercent: _doubleFromJson(json, const ['progress_percent', 'progress', 'completion_percent']),
       enrolledAt: _dateTimeFromJson(json, const ['enrolled_at', 'created_at', 'joined_at']),
-      imageUrl: _stringFromJson(course ?? json, const ['image_url', 'imageUrl', 'poster_url']),
+      imageUrl: formatFullUrl(_stringFromJson(course ?? json, const ['image_url', 'imageUrl', 'poster_url'])),
     );
   }
 }

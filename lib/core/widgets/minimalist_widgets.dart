@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme.dart';
+import '../utils/url_utils.dart';
 
 class MinimalContainer extends StatelessWidget {
   final Widget? child;
@@ -15,7 +17,7 @@ class MinimalContainer extends StatelessWidget {
   const MinimalContainer({
     super.key,
     this.child,
-    this.borderRadius = 24,
+    this.borderRadius = 16,
     this.color,
     this.padding,
     this.margin,
@@ -41,8 +43,17 @@ class MinimalContainer extends StatelessWidget {
         borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(borderRadius),
         border: Border.all(
           color: isDark ? theme.colorScheme.outline : AppColors.border,
-          width: 1.5,
+          width: 1.0,
         ),
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : null,
       ),
       child: child,
     );
@@ -64,9 +75,9 @@ class MinimalButton extends StatelessWidget {
     required this.child,
     this.borderRadius = 12,
     this.color,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     this.width = double.infinity,
-    this.height = 52,
+    this.height = 48,
   });
 
   @override
@@ -144,7 +155,7 @@ class MinimalTextField extends StatelessWidget {
   }
 }
 
-class SafeAvatar extends StatelessWidget {
+class SafeAvatar extends ConsumerWidget {
   final String? imageUrl;
   final double radius;
   final Color? backgroundColor;
@@ -163,11 +174,12 @@ class SafeAvatar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final bgColor = backgroundColor ?? theme.colorScheme.primary.withValues(alpha: 0.14);
     final textColor = fallbackTextColor ?? theme.colorScheme.primary;
     final size = radius * 2;
+    final formatUrl = ref.watch(urlFormatterProvider);
 
     final fallback = Text(
       fallbackText,
@@ -184,7 +196,7 @@ class SafeAvatar extends StatelessWidget {
       child: (imageUrl != null && imageUrl!.isNotEmpty)
           ? ClipOval(
               child: Image.network(
-                imageUrl!,
+                formatUrl(imageUrl),
                 width: size,
                 height: size,
                 fit: BoxFit.cover,

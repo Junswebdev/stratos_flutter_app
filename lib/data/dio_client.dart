@@ -8,7 +8,17 @@ const String refreshTokenStorageKey = 'stratos_refresh_token';
 const String userCacheStorageKey = 'stratos_cached_user';
 
 String get _defaultApiBaseUrl {
-  return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
+  // If a specific URL is provided via --dart-define, use it
+  const envUrl = String.fromEnvironment('API_BASE_URL');
+  if (envUrl.isNotEmpty) return envUrl;
+
+  if (kDebugMode) {
+    // In debug mode, default to the local machine
+    return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
+  } else {
+    // In release/profile mode (built app), default to the production server
+    return 'https://stratos-fastapi-backend.onrender.com/api/v1/';
+  }
 }
 
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {

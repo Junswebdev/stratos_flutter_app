@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme.dart';
+import '../../../../core/widgets/minimalist_widgets.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../auth/domain/user_model.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../home/application/home_providers.dart';
+import '../../../home/presentation/widgets/async_state_view.dart';
 import '../../data/chat_repository.dart';
 
 final conversationsProvider = FutureProvider<List<ConversationSummary>>((ref) async {
@@ -17,7 +19,19 @@ final conversationsProvider = FutureProvider<List<ConversationSummary>>((ref) as
   final repository = ref.watch(chatRepositoryProvider);
   final rawData = await repository.getRecentConversations();
 
-  return rawData.map((json) => ConversationSummary.fromJson(json)).toList();
+  return rawData
+      .map((json) => ConversationSummary.fromJson(json))
+      .where((convo) {
+        final title = convo.title.toLowerCase();
+        final sender = convo.senderName.toLowerCase();
+        // Filter out placeholder/test conversations
+        return !title.contains('test') && 
+               !title.contains('example') && 
+               title != 'string' &&
+               !sender.contains('stratos tester') &&
+               sender != 'string';
+      })
+      .toList();
 });
 
 final contactsProvider = FutureProvider<List<UserModel>>((ref) async {
@@ -74,35 +88,40 @@ class ConversationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final conversationsAsync = ref.watch(conversationsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       appBar: AppBar(
         title: const Text('Messages'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_add_alt_1_outlined),
-            tooltip: 'New direct message',
+            icon: const Icon(Icons.add_comment_rounded, size: 20),
             onPressed: () => _showNewMessageSheet(context, ref),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: conversationsAsync.when(
-        data: (conversations) => RefreshIndicator(
+      body: AsyncStateView(
+        isLoading: conversationsAsync.isLoading,
+        hasError: conversationsAsync.hasError,
+        errorMessage: conversationsAsync.error?.toString(),
+        onRetry: () => ref.invalidate(conversationsProvider),
+        loadingLabel: 'Loading your messages...',
+        child: RefreshIndicator(
           onRefresh: () async => ref.invalidate(conversationsProvider),
-          child: conversations.isEmpty
+          child: (conversationsAsync.value == null || conversationsAsync.value!.isEmpty)
               ? _buildEmptyState(context, ref)
               : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: conversations.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  itemCount: conversationsAsync.value!.length,
                   itemBuilder: (context, index) {
-                    final convo = conversations[index];
-                    return _ConversationTile(convo: convo, isDark: isDark);
+                    final convo = conversationsAsync.value![index];
+                    return _ConversationTile(convo: convo);
                   },
                 ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
@@ -111,25 +130,31 @@ class ConversationsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.forum_outlined, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.25)),
-            const SizedBox(height: 16),
-            Text('No conversations yet', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.forum_outlined, size: 48, color: AppColors.primary),
+            ),
+            const SizedBox(height: 24),
+            const Text('No conversations yet', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             const SizedBox(height: 8),
             Text(
-              'Start a course discussion or message someone directly.',
+              'Stay connected with your classmates and instructors.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
+            const SizedBox(height: 32),
+            MinimalButton(
+              width: 220,
               onPressed: () => _showNewMessageSheet(context, ref),
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('New Direct Message'),
+              child: const Text('Start Messaging'),
             ),
           ],
         ),
@@ -143,67 +168,81 @@ class ConversationsScreen extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 8,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
-          ),
-          child: Consumer(
-            builder: (context, ref, _) {
-              final contactsAsync = ref.watch(contactsProvider);
-              return SizedBox(
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        return DraggableScrollableSheet(
+          initialChildSize: 0.8,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (ctx, scrollController) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurface : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Start a direct message', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Search people',
-                        prefixIcon: Icon(Icons.search_rounded),
-                      ),
-                      onChanged: (_) => ref.invalidate(contactsProvider),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: contactsAsync.when(
+                    const Text('New Message', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+                    IconButton(icon: const Icon(Icons.close_rounded, size: 20), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search by name or email...',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                  onChanged: (_) => ref.invalidate(contactsProvider),
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final contactsAsync = ref.watch(contactsProvider);
+                      return contactsAsync.when(
                         data: (contacts) {
                           final query = searchController.text.trim().toLowerCase();
                           final filtered = contacts.where((user) {
-                            if (query.isEmpty) return true;
-                            final name = (user.fullName ?? '').toLowerCase();
+                            // Filter out test/placeholder accounts
                             final email = user.email.toLowerCase();
+                            final name = (user.fullName ?? '').toLowerCase();
+                            if (email.contains('test.com') || 
+                                email.contains('example.com') || 
+                                name == 'string' ||
+                                name.contains('stratos tester')) {
+                              return false;
+                            }
+
+                            if (query.isEmpty) return true;
                             return name.contains(query) || email.contains(query);
                           }).toList();
 
-                          if (filtered.isEmpty) {
-                            return const Center(child: Text('No matching users'));
-                          }
+                          if (filtered.isEmpty) return const Center(child: Text('No results found.'));
 
-                          return ListView.separated(
+                          return ListView.builder(
+                            controller: scrollController,
                             itemCount: filtered.length,
-                            separatorBuilder: (_, _) => const Divider(height: 1),
                             itemBuilder: (itemContext, index) {
                               final user = filtered[index];
                               return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                  child: Text(_initial(user), style: const TextStyle(fontWeight: FontWeight.w800)),
-                                ),
-                                title: Text(user.fullName?.isNotEmpty == true ? user.fullName! : user.email),
-                                subtitle: Text(user.email),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                leading: SafeAvatar(radius: 20, imageUrl: user.avatarUrl, fallbackText: _initial(user)),
+                                title: Text(user.fullName ?? user.email, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                subtitle: Text(user.email, style: const TextStyle(fontSize: 12)),
+                                trailing: const Icon(Icons.chevron_right_rounded, size: 18),
                                 onTap: () {
-                                  Navigator.pop(sheetContext);
+                                  Navigator.pop(ctx);
                                   context.pushNamed(
                                     'direct_chat',
                                     pathParameters: {'userId': user.id},
-                                    extra: user.fullName?.isNotEmpty == true ? user.fullName : user.email,
+                                    extra: user.fullName ?? user.email,
                                   );
                                 },
                               );
@@ -212,12 +251,12 @@ class ConversationsScreen extends ConsumerWidget {
                         },
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (e, _) => Center(child: Text('Error: $e')),
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
         );
       },
@@ -226,150 +265,116 @@ class ConversationsScreen extends ConsumerWidget {
   }
 }
 
-class _ConversationTile extends StatelessWidget {
-  const _ConversationTile({required this.convo, required this.isDark});
+class _ConversationTile extends ConsumerWidget {
+  const _ConversationTile({required this.convo});
 
   final ConversationSummary convo;
-  final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    final timeStr = _formatTime(convo.lastMessageTime);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isUnread = convo.unreadCount > 0;
-    final isDirect = convo.isDirect;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isUnread ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border)),
       ),
-      child: Consumer(
-        builder: (context, ref, child) {
-          return ListTile(
-            onTap: () async {
-              if (convo.courseId != null) {
-                await ref.read(chatRepositoryProvider).markAsRead(convo.courseId!);
-                ref.invalidate(conversationsProvider);
-                ref.invalidate(statsProvider);
-                if (context.mounted) {
-                  context.pushNamed('course_chat', pathParameters: {'courseId': convo.courseId!}, extra: convo.courseName);
-                }
-              } else if (convo.recipientId != null) {
-                await ref.read(chatRepositoryProvider).markDirectAsRead(convo.recipientId!);
-                ref.invalidate(conversationsProvider);
-                ref.invalidate(statsProvider);
-                if (context.mounted) {
-                  context.pushNamed(
-                    'direct_chat',
-                    pathParameters: {'userId': convo.recipientId!},
-                    extra: convo.title,
-                  );
-                }
+      child: ListTile(
+        onTap: () async {
+            if (convo.courseId != null) {
+              await ref.read(chatRepositoryProvider).markAsRead(convo.courseId!);
+              ref.invalidate(conversationsProvider);
+              ref.invalidate(statsProvider);
+              if (context.mounted) {
+                context.pushNamed('course_chat', pathParameters: {'courseId': convo.courseId!}, extra: convo.courseName);
               }
-            },
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: (isDirect ? Colors.blueGrey : AppColors.primary).withValues(alpha: 0.1),
-                  child: Icon(
-                    isDirect ? Icons.person_rounded : Icons.school_rounded,
-                    color: isDirect ? Colors.blueGrey : AppColors.primary,
-                  ),
-                ),
-                if (isUnread)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(color: AppColors.netflixRed, shape: BoxShape.circle),
-                      child: Text(
-                        '${convo.unreadCount}',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    convo.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: isUnread ? FontWeight.bold : FontWeight.w600, fontSize: 16),
-                  ),
-                ),
-                Text(timeStr, style: TextStyle(fontSize: 12, color: isUnread ? AppColors.primary : Colors.grey)),
-              ],
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '${convo.senderName == ref.read(profileProvider).value?.displayName ? 'You' : convo.senderName}: ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isUnread ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
-                          ),
-                        ),
-                        if (convo.senderName == ref.read(profileProvider).value?.displayName)
-                          const WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Padding(
-                              padding: EdgeInsets.only(right: 4.0),
-                              child: Icon(Icons.done_all_rounded, size: 12, color: Colors.grey),
-                            ),
-                          ),
-                        TextSpan(
-                          text: convo.lastMessage,
-                          style: TextStyle(
-                            color: isUnread ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      isDirect ? 'Direct Message' : 'Course Group Chat',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: (isDirect ? Colors.blueGrey : AppColors.primary).withValues(alpha: 0.8),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+            } else if (convo.recipientId != null) {
+              await ref.read(chatRepositoryProvider).markDirectAsRead(convo.recipientId!);
+              ref.invalidate(conversationsProvider);
+              ref.invalidate(statsProvider);
+              if (context.mounted) {
+                context.pushNamed('direct_chat', pathParameters: {'userId': convo.recipientId!}, extra: convo.title);
+              }
+            }
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        leading: Stack(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: convo.isDirect ? AppColors.primary.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                convo.isDirect ? Icons.person_outline_rounded : Icons.school_outlined,
+                color: convo.isDirect ? AppColors.primary : Colors.black54,
               ),
             ),
-          );
-        },
+            if (isUnread)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isDark ? AppColors.darkSurface : Colors.white, width: 2),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        title: Row(
+          children: [
+            Expanded(child: Text(convo.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15))),
+            Text(_formatTime(convo.lastMessageTime), style: TextStyle(fontSize: 10, color: isUnread ? AppColors.primary : theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${convo.senderName}: ${convo.lastMessage}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isUnread ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: isUnread ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              if (isUnread)
+                Container(
+                  margin: const EdgeInsets.only(left: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(4)),
+                  child: Text('${convo.unreadCount}', style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900)),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
 
-  String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    return DateFormat('MMM d').format(dt);
-  }
+String _formatTime(DateTime dt) {
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+  if (diff.inHours < 24) return '${diff.inHours}h';
+  return DateFormat('MMM d').format(dt);
 }
 
 String _initial(UserModel user) {

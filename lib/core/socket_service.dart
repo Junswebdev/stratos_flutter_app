@@ -48,12 +48,28 @@ class SocketService {
       if (state?.isAuthenticated == true) {
         _connect();
       } else {
-        _disconnect();
+        disconnect();
       }
     });
   }
 
   String? _currentUserId;
+
+  void disconnect() {
+    _subscription?.cancel();
+    _channel?.sink.close();
+    _isConnected = false;
+  }
+
+  void _reconnect() {
+    _isConnected = false;
+    Future.delayed(const Duration(seconds: 5), () {
+      final auth = _ref.read(authControllerProvider).value;
+      if (auth?.isAuthenticated == true) {
+        _connect();
+      }
+    });
+  }
 
   Future<void> _connect() async {
     if (_isConnected || _isConnecting) return;
@@ -84,18 +100,21 @@ class SocketService {
       _isConnected = true;
       _isConnecting = false;
 
-      _subscription = _channel!.stream.listen(
-        (data) {
-          _handleMessage(data as String);
-        },
-        onError: (error) {
-          _reconnect();
-        },
-        onDone: () {
-          _isConnected = false;
-          _isConnecting = false;
-        },
-      );
+      final stream = _channel?.stream;
+      if (stream != null) {
+        _subscription = stream.listen(
+          (data) {
+            _handleMessage(data as String);
+          },
+          onError: (error) {
+            _reconnect();
+          },
+          onDone: () {
+            _isConnected = false;
+            _isConnecting = false;
+          },
+        );
+      }
     } catch (e) {
       _isConnected = false;
       _isConnecting = false;
@@ -154,21 +173,6 @@ class SocketService {
     }
   }
 
-  void _reconnect() {
-    _isConnected = false;
-    Future.delayed(const Duration(seconds: 5), () {
-      final auth = _ref.read(authControllerProvider).value;
-      if (auth?.isAuthenticated == true) {
-        _connect();
-      }
-    });
-  }
-
-  void _disconnect() {
-    _subscription?.cancel();
-    _channel?.sink.close();
-    _isConnected = false;
-  }
 
   void sendRaw(String data) {
     _channel?.sink.add(data);
