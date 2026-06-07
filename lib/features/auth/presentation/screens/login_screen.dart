@@ -52,10 +52,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       } else {
         final state = ref.read(authControllerProvider).value;
-        final error = state?.error;
+        String error = state?.error ?? 'Login failed';
+        
+        // Enhance connection error messages for mobile troubleshooting
+        if (error.contains('SocketException') || error.contains('connection refused') || error.contains('Network is unreachable')) {
+          error = 'Connection to server failed. If you are on a real device, ensure the backend IP is correct in dio_client.dart.';
+        }
+
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error ?? 'Login failed')));
+        ).showSnackBar(SnackBar(
+          content: Text(error),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(label: 'OK', onPressed: () {}),
+        ));
       }
     }
   }

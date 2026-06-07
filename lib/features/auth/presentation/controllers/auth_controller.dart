@@ -75,7 +75,8 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = const AsyncLoading();
     try {
       final googleSignIn = GoogleSignIn(
-        clientId: '924562664956-n363u9htfvjvr5s49pvjekktgd0s9gbm.apps.googleusercontent.com',
+        clientId: kIsWeb ? '924562664956-n363u9htfvjvr5s49pvjekktgd0s9gbm.apps.googleusercontent.com' : null,
+        scopes: ['email', 'profile', 'openid'],
       );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {

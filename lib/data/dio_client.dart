@@ -8,15 +8,22 @@ const String refreshTokenStorageKey = 'stratos_refresh_token';
 const String userCacheStorageKey = 'stratos_cached_user';
 
 String get _defaultApiBaseUrl {
-  // If a specific URL is provided via --dart-define, use it
+  // 1. Check for --dart-define=API_BASE_URL=...
   const envUrl = String.fromEnvironment('API_BASE_URL');
   if (envUrl.isNotEmpty) return envUrl;
 
-  if (kDebugMode) {
-    // In debug mode, default to the local machine
-    return kIsWeb ? 'http://localhost:8000/api/v1/' : 'http://10.0.2.2:8000/api/v1/';
+  // 2. TOGGLE THIS TO TRUE IF YOU WANT TO USE RENDER (DEPLOYED) BACKEND ON YOUR PHONE
+  const bool useProductionForTesting = true;
+
+  if (kDebugMode && !useProductionForTesting) {
+    if (kIsWeb) return 'http://localhost:8000/api/v1/';
+    
+    // 3. FOR REAL PHONES (Local machine): Change '10.0.2.2' to your computer's Local IP
+    const String localIp = '10.0.2.2';
+    
+    return 'http://$localIp:8000/api/v1/';
   } else {
-    // In release/profile mode (built app), default to the production server
+    // This is your Render URL
     return 'https://stratos-fastapi-backend.onrender.com/api/v1/';
   }
 }
@@ -69,6 +76,9 @@ final dioClientProvider = Provider<Dio>((ref) {
         handler.next(response);
       },
       onError: (error, handler) {
+        debugPrint('DIO ERROR: ${error.type} - ${error.message}');
+        debugPrint('DIO BASE URL: ${error.requestOptions.baseUrl}');
+        debugPrint('DIO PATH: ${error.requestOptions.path}');
         handler.next(error);
       },
     ),
